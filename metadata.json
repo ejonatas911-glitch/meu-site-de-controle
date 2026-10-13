@@ -1,0 +1,6 @@
+{
+  "name": "Meu Controle de Parcelas",
+  "description": "Sistema de Jonatas Eduardo para controle pessoal e de despesas, empréstimos e parcelas pagas e a pagar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

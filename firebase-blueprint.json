@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "Person": {
+      "title": "Person",
+      "description": "Uma pessoa ou titular de despesas no sistema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identificador único da pessoa",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Nome da pessoa",
+          "maxLength": 100
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Se é o titular principal"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Data de criação em formato ISO",
+          "maxLength": 50
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID do usuário proprietário da conta",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "name", "userId"]
+    },
+    "Installment": {
+      "title": "Installment",
+      "description": "Uma parcela individual de empréstimo ou despesa",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number",
+          "description": "Número ordinal da parcela"
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Data prevista de vencimento (YYYY-MM-DD)",
+          "maxLength": 20
+        },
+        "amount": {
+          "type": "number",
+          "description": "Valor monetário da parcela em reais"
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Se a parcela está marcada como paga"
+        },
+        "paidAt": {
+          "type": "string",
+          "description": "Data ou data/hora em que a parcela foi paga",
+          "maxLength": 50
+        },
+        "notes": {
+          "type": "string",
+          "description": "Observação sobre a parcela",
+          "maxLength": 300
+        }
+      },
+      "required": ["number", "dueDate", "amount", "isPaid"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Um empréstimo ou despesa parcelada",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identificador único da despesa",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID do usuário proprietário",
+          "maxLength": 128
+        },
+        "personId": {
+          "type": "string",
+          "description": "Identificador da pessoa vinculada",
+          "maxLength": 128
+        },
+        "type": {
+          "type": "string",
+          "description": "Tipo: emprestimo ou despesa",
+          "enum": ["emprestimo", "despesa"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Nome ou descrição do item",
+          "maxLength": 150
+        },
+        "originalAmount": {
+          "type": "number",
+          "description": "Valor original do empréstimo ou compra"
+        },
+        "installmentAmount": {
+          "type": "number",
+          "description": "Valor unitário de cada parcela"
+        },
+        "totalInstallments": {
+          "type": "number",
+          "description": "Quantidade total de parcelas (ex: 24)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Data do primeiro pagamento (YYYY-MM-DD)",
+          "maxLength": 20
+        },
+        "frequency": {
+          "type": "string",
+          "description": "Frequência de pagamento",
+          "enum": ["diaria", "semanal", "mensal"]
+        },
+        "notes": {
+          "type": "string",
+          "description": "Observações adicionais",
+          "maxLength": 500
+        },
+        "installments": {
+          "type": "array",
+          "description": "Lista com as parcelas de 1 a N"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Data de criação ISO",
+          "maxLength": 50
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Data de atualização ISO",
+          "maxLength": 50
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "personId",
+        "type",
+        "title",
+        "originalAmount",
+        "installmentAmount",
+        "totalInstallments",
+        "startDate",
+        "frequency",
+        "installments"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/people/{personId}": {
+      "schema": "Person",
+      "description": "Pessoas cadastradas por um usuário"
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Despesas e empréstimos cadastrados por um usuário"
+    }
+  }
+}
