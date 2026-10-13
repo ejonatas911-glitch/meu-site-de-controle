@@ -1,7 +1,7 @@
 import { FrequencyType, Installment, ExpenseItem, ExpenseSummary } from '../types/index.ts';
 
 /**
- * Calculates due date for installment n (1-indexed) based on start date and frequency.
+ * Calculates due date for installment n (0-indexed) based on start date and frequency.
  */
 export function calculateDueDate(startDateStr: string, installmentIndex: number, frequency: FrequencyType): string {
   const [year, month, day] = startDateStr.split('-').map(Number);
@@ -32,7 +32,7 @@ export function calculateDueDate(startDateStr: string, installmentIndex: number,
   return formatDateKey(resultDate);
 }
 
-function formatDateKey(date: Date): string {
+export function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -40,22 +40,36 @@ function formatDateKey(date: Date): string {
 }
 
 /**
- * Generates fresh installments list
+ * Generates fresh installments list with optional pre-paid count or specific paid numbers
  */
 export function generateInstallments(
   startDateStr: string,
   totalInstallments: number,
   installmentAmount: number,
-  frequency: FrequencyType
+  frequency: FrequencyType,
+  paidCountOrNumbers: number | number[] = 0
 ): Installment[] {
   const list: Installment[] = [];
+  const today = formatDateKey(new Date());
+
+  const isIndexPaid = (idx: number) => {
+    if (typeof paidCountOrNumbers === 'number') {
+      return idx < paidCountOrNumbers;
+    }
+    if (Array.isArray(paidCountOrNumbers)) {
+      return paidCountOrNumbers.includes(idx + 1);
+    }
+    return false;
+  };
+
   for (let i = 0; i < totalInstallments; i++) {
+    const isPaid = isIndexPaid(i);
     list.push({
       number: i + 1,
       dueDate: calculateDueDate(startDateStr, i, frequency),
       amount: installmentAmount,
-      isPaid: false,
-      paidAt: null,
+      isPaid,
+      paidAt: isPaid ? today : null,
     });
   }
   return list;
@@ -97,39 +111,40 @@ export function calculateExpenseSummary(item: ExpenseItem): ExpenseSummary {
 }
 
 /**
- * Updates installments when editing an existing expense while preserving paid status
+ * Updates installments when editing an existing expense while preserving or updating paid status
  */
 export function syncInstallmentsOnEdit(
   existingInstallments: Installment[],
   newStartDateStr: string,
   newTotalInstallments: number,
   newInstallmentAmount: number,
-  newFrequency: FrequencyType
+  newFrequency: FrequencyType,
+  explicitPaidNumbers?: number[]
 ): Installment[] {
   const result: Installment[] = [];
+  const today = formatDateKey(new Date());
 
   for (let i = 0; i < newTotalInstallments; i++) {
     const prev = existingInstallments[i];
     const dueDate = calculateDueDate(newStartDateStr, i, newFrequency);
+    const num = i + 1;
 
-    if (prev) {
-      result.push({
-        number: i + 1,
-        dueDate,
-        amount: newInstallmentAmount,
-        isPaid: prev.isPaid,
-        paidAt: prev.paidAt,
-        notes: prev.notes,
-      });
-    } else {
-      result.push({
-        number: i + 1,
-        dueDate,
-        amount: newInstallmentAmount,
-        isPaid: false,
-        paidAt: null,
-      });
+    let isPaid = prev ? prev.isPaid : false;
+    let paidAt = prev ? prev.paidAt : null;
+
+    if (explicitPaidNumbers !== undefined) {
+      isPaid = explicitPaidNumbers.includes(num);
+      paidAt = isPaid ? (prev?.paidAt || today) : null;
     }
+
+    result.push({
+      number: num,
+      dueDate,
+      amount: newInstallmentAmount,
+      isPaid,
+      paidAt,
+      notes: prev?.notes,
+    });
   }
 
   return result;

@@ -10,6 +10,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   authError: string | null;
+  dismissAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   logout: async () => {},
   authError: null,
+  dismissAuthError: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -46,8 +48,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      console.error('Erro ao conectar com Google:', err);
-      setAuthError(err?.message || 'Falha ao autenticar com Google.');
+      if (err?.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, not a system failure
+        return;
+      }
+      if (err?.code === 'auth/popup-blocked') {
+        setAuthError('O navegador bloqueou a janela de login. Por favor, autorize popups para este site.');
+        return;
+      }
+      console.warn('Erro ao conectar com Google:', err);
+      setAuthError(err?.message || 'Falha ao autenticar com Google. Seus dados continuam salvos no aparelho.');
     }
   };
 
@@ -59,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const dismissAuthError = () => setAuthError(null);
+
   return (
     <AuthContext.Provider
       value={{
@@ -68,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithGoogle,
         logout,
         authError,
+        dismissAuthError,
       }}
     >
       {children}

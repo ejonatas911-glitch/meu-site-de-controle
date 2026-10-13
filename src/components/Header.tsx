@@ -23,8 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   const { currentUser, signInWithGoogle, logout, isFirestoreConnected } = useAuth();
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-      <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs w-full">
+      <div className="w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         {/* Top Brand & Title Row */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           

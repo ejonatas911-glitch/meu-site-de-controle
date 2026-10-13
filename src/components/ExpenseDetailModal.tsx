@@ -179,42 +179,51 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Quick Batch Selector Bar: "Marcar de 1 até X" */}
-        <div className="px-4 sm:px-6 py-2.5 bg-emerald-50/70 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 text-emerald-950 font-semibold">
-            <span>Marcar da parcela 1 até a:</span>
-            <select
-              value={selectedUpTo}
-              onChange={(e) => setSelectedUpTo(Number(e.target.value))}
-              className="bg-white border border-emerald-300 rounded-lg px-2 py-1 font-bold text-emerald-900 focus:outline-hidden"
-            >
-              {expense.installments.map((i) => (
-                <option key={i.number} value={i.number}>
-                  Parcela {i.number}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => onMarkUpTo(expense.id, selectedUpTo)}
-              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg shadow-2xs transition-colors"
-            >
-              Aplicar ({selectedUpTo} pagas)
-            </button>
+        {/* Quick Batch Selector Bar: Sequencial de 1 até 24 */}
+        <div className="px-4 sm:px-6 py-2.5 bg-emerald-50/80 border-b border-emerald-100 space-y-1.5 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-emerald-950">
+              Pagar da parcela 1 até a escolhida (ex: toque no 14 para pagar da 1 até a 14):
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onUnmarkAll(expense.id)}
+                className="px-2 py-0.5 text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                Zerar (0)
+              </button>
+              <button
+                type="button"
+                onClick={() => onMarkAllPaid(expense.id)}
+                className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors cursor-pointer"
+              >
+                Todas ({expense.totalInstallments})
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-emerald-800 font-medium">
-            <span>Atalhos:</span>
-            {[5, 10, 12, 24].filter((n) => n <= expense.totalInstallments).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => onMarkUpTo(expense.id, n)}
-                className="px-2 py-0.5 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-md font-mono"
-              >
-                1 a {n}
-              </button>
-            ))}
+          {/* Sequential buttons: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ... 24 */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-0.5">
+            {expense.installments.map((i) => {
+              const isPaid = i.isPaid;
+
+              return (
+                <button
+                  key={i.number}
+                  type="button"
+                  onClick={() => onMarkUpTo(expense.id, i.number)}
+                  title={`Marcar da parcela 1 até a ${i.number} como pagas`}
+                  className={`min-w-[34px] h-8 px-1.5 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                    isPaid
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white hover:bg-emerald-100 text-slate-800 border border-emerald-300'
+                  }`}
+                >
+                  {i.number}
+                </button>
+              );
+            })}
           </div>
         </div>
 

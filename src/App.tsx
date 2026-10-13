@@ -28,15 +28,16 @@ import {
   deletePersonFromFirestore,
   syncLocalDataToFirestoreIfEmpty,
 } from './firebase/service.ts';
-import { Plus, Cloud, CloudCheck, LogIn } from 'lucide-react';
+import { Plus, Cloud, CloudCheck, LogIn, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 function MainApp() {
-  const { currentUser, signInWithGoogle } = useAuth();
+  const { currentUser, signInWithGoogle, authError, dismissAuthError } = useAuth();
   const [people, setPeople] = useState<Person[]>(() => loadPeople());
   const [expenses, setExpenses] = useState<ExpenseItem[]>(() => loadExpenses());
   const [selectedPersonId, setSelectedPersonId] = useState<string>(() => loadSelectedPersonFilter());
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Modals state
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
@@ -180,15 +181,10 @@ function MainApp() {
 
   // Expense Handlers
   const handleSaveExpense = (savedItem: ExpenseItem) => {
-    // 1. Update local state
+    // 1. Update local state placing the saved/edited item cleanly at the top
     setExpenses((prev) => {
-      const index = prev.findIndex((e) => e.id === savedItem.id);
-      if (index >= 0) {
-        const next = [...prev];
-        next[index] = savedItem;
-        return next;
-      }
-      return [savedItem, ...prev];
+      const filtered = prev.filter((e) => e.id !== savedItem.id);
+      return [savedItem, ...filtered];
     });
 
     // 2. Persist to Firestore if logged in
@@ -197,6 +193,11 @@ function MainApp() {
         console.error('Erro ao salvar no Firestore:', err)
       );
     }
+
+    setToastMessage(`✓ "${savedItem.title}" salva com sucesso! Todas as parcelas organizadas.`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
   };
 
   const handleDeleteExpense = (expenseId: string) => {
@@ -216,37 +217,31 @@ function MainApp() {
     }
   };
 
-  // Toggle single installment paid/unpaid
+  // Toggle single installment paid/unpaid with synchronous update calculation
   const handleToggleInstallment = (expenseId: string, installmentNumber: number) => {
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
     const now = toDateInputValue(new Date());
+    const updatedInstallments = item.installments.map((inst) => {
+      if (inst.number !== installmentNumber) return inst;
+      const nextIsPaid = !inst.isPaid;
+      return {
+        ...inst,
+        isPaid: nextIsPaid,
+        paidAt: nextIsPaid ? now : null,
+      };
+    });
 
-    let updatedItem: ExpenseItem | null = null;
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: updatedInstallments,
+      updatedAt: new Date().toISOString(),
+    };
 
-    setExpenses((prev) =>
-      prev.map((item) => {
-        if (item.id !== expenseId) return item;
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
 
-        const updatedInstallments = item.installments.map((inst) => {
-          if (inst.number !== installmentNumber) return inst;
-          const nextIsPaid = !inst.isPaid;
-          return {
-            ...inst,
-            isPaid: nextIsPaid,
-            paidAt: nextIsPaid ? now : null,
-          };
-        });
-
-        updatedItem = {
-          ...item,
-          installments: updatedInstallments,
-          updatedAt: new Date().toISOString(),
-        };
-
-        return updatedItem;
-      })
-    );
-
-    if (currentUser && updatedItem) {
+    if (currentUser) {
       saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
         console.error('Erro ao atualizar parcela no Firestore:', err)
       );
@@ -266,40 +261,35 @@ function MainApp() {
 
   // Mark installments from 1 up to N as paid, and > N as unpaid
   const handleMarkUpTo = (expenseId: string, upToNumber: number) => {
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
     const now = toDateInputValue(new Date());
-    let updatedItem: ExpenseItem | null = null;
-
-    setExpenses((prev) =>
-      prev.map((item) => {
-        if (item.id !== expenseId) return item;
-
-        const updatedInstallments = item.installments.map((inst) => {
-          if (inst.number <= upToNumber) {
-            return {
-              ...inst,
-              isPaid: true,
-              paidAt: inst.paidAt || now,
-            };
-          } else {
-            return {
-              ...inst,
-              isPaid: false,
-              paidAt: null,
-            };
-          }
-        });
-
-        updatedItem = {
-          ...item,
-          installments: updatedInstallments,
-          updatedAt: new Date().toISOString(),
+    const updatedInstallments = item.installments.map((inst) => {
+      if (inst.number <= upToNumber) {
+        return {
+          ...inst,
+          isPaid: true,
+          paidAt: inst.paidAt || now,
         };
+      } else {
+        return {
+          ...inst,
+          isPaid: false,
+          paidAt: null,
+        };
+      }
+    });
 
-        return updatedItem;
-      })
-    );
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: updatedInstallments,
+      updatedAt: new Date().toISOString(),
+    };
 
-    if (currentUser && updatedItem) {
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
+
+    if (currentUser) {
       saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
         console.error('Erro ao atualizar lote no Firestore:', err)
       );
@@ -308,26 +298,23 @@ function MainApp() {
 
   // Mark all installments paid
   const handleMarkAllPaid = (expenseId: string) => {
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
     const now = toDateInputValue(new Date());
-    let updatedItem: ExpenseItem | null = null;
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: item.installments.map((inst) => ({
+        ...inst,
+        isPaid: true,
+        paidAt: inst.paidAt || now,
+      })),
+      updatedAt: new Date().toISOString(),
+    };
 
-    setExpenses((prev) =>
-      prev.map((item) => {
-        if (item.id !== expenseId) return item;
-        updatedItem = {
-          ...item,
-          installments: item.installments.map((inst) => ({
-            ...inst,
-            isPaid: true,
-            paidAt: inst.paidAt || now,
-          })),
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedItem;
-      })
-    );
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
 
-    if (currentUser && updatedItem) {
+    if (currentUser) {
       saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
         console.error('Erro ao quitar todas no Firestore:', err)
       );
@@ -336,25 +323,22 @@ function MainApp() {
 
   // Unmark all installments
   const handleUnmarkAll = (expenseId: string) => {
-    let updatedItem: ExpenseItem | null = null;
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
 
-    setExpenses((prev) =>
-      prev.map((item) => {
-        if (item.id !== expenseId) return item;
-        updatedItem = {
-          ...item,
-          installments: item.installments.map((inst) => ({
-            ...inst,
-            isPaid: false,
-            paidAt: null,
-          })),
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedItem;
-      })
-    );
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: item.installments.map((inst) => ({
+        ...inst,
+        isPaid: false,
+        paidAt: null,
+      })),
+      updatedAt: new Date().toISOString(),
+    };
 
-    if (currentUser && updatedItem) {
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
+
+    if (currentUser) {
       saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
         console.error('Erro ao desmarcar todas no Firestore:', err)
       );
@@ -462,10 +446,37 @@ function MainApp() {
         onOpenBackup={() => setIsBackupOpen(true)}
       />
 
+      {/* Floating Save Success Toast */}
+      {toastMessage && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 bg-emerald-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl shadow-emerald-950/30 flex items-center gap-2 border border-emerald-600 transition-all">
+          <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Auth error notification banner if any */}
+      {authError && (
+        <div className="bg-amber-50 border-b border-amber-200/80 px-3 sm:px-6 lg:px-8 py-2.5 text-xs text-amber-900 w-full">
+          <div className="w-full flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{authError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={dismissAuthError}
+              className="px-2 py-0.5 rounded text-amber-800 hover:bg-amber-100 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Cloud Status Notification Banner */}
       {!currentUser ? (
-        <div className="bg-emerald-50/90 border-b border-emerald-200/80 px-4 py-2.5 text-xs text-emerald-900">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="bg-emerald-50/90 border-b border-emerald-200/80 px-3 sm:px-6 lg:px-8 py-2.5 text-xs text-emerald-900 w-full">
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Cloud className="w-4 h-4 text-emerald-700 shrink-0" />
               <span>
@@ -483,8 +494,8 @@ function MainApp() {
           </div>
         </div>
       ) : (
-        <div className="bg-emerald-900/5 border-b border-emerald-200/60 px-4 py-2 text-xs text-emerald-800">
-          <div className="max-w-6xl mx-auto flex items-center gap-2">
+        <div className="bg-emerald-900/5 border-b border-emerald-200/60 px-3 sm:px-6 lg:px-8 py-2 text-xs text-emerald-800 w-full">
+          <div className="w-full flex items-center gap-2">
             <CloudCheck className="w-4 h-4 text-emerald-700 shrink-0" />
             <span>
               Sincronização em tempo real ativa no Firebase Firestore para <strong>{currentUser.email}</strong>. Suas despesas e parcelas estão protegidas e salvas na nuvem.
@@ -493,8 +504,8 @@ function MainApp() {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-6 space-y-6 pb-24 md:pb-12">
+      {/* Main Content Area: 100% Barra Cheia */}
+      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6 pb-24 md:pb-12">
         {/* KPI Summaries and Filters */}
         <SummaryCards
           totalItemsCount={aggregateMetrics.totalItemsCount}

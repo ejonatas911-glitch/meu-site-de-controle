@@ -78,7 +78,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
       {expenses.map((expense) => {
         const summary = calculateExpenseSummary(expense);
         const personName = getPersonName(expense.personId);
@@ -228,7 +228,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                 </div>
 
                 {isGridExpanded && (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-56 overflow-y-auto p-1 bg-slate-50/60 rounded-xl border border-slate-200/70">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-1.5 p-2 bg-slate-50/70 rounded-xl border border-slate-200/80 w-full">
                     {expense.installments.map((inst) => (
                       <button
                         key={inst.number}
@@ -251,10 +251,17 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                         </div>
                         <span
                           className={`text-[10px] font-mono tabular-nums leading-tight mt-0.5 ${
-                            inst.isPaid ? 'text-emerald-100' : 'text-slate-500'
+                            inst.isPaid ? 'text-emerald-100 font-semibold' : 'text-slate-700 font-medium'
                           }`}
                         >
                           {formatCurrency(inst.amount)}
+                        </span>
+                        <span
+                          className={`text-[9px] leading-tight mt-0.5 ${
+                            inst.isPaid ? 'text-emerald-200' : 'text-slate-400'
+                          }`}
+                        >
+                          {inst.dueDate ? inst.dueDate.split('-').slice(1).reverse().join('/') : ''}
                         </span>
                       </button>
                     ))}

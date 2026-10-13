@@ -60,6 +60,19 @@ export function getFrequencyShort(frequency: FrequencyType): string {
   }
 }
 
+export function getDaysIntervalLabel(frequency: FrequencyType): string {
+  switch (frequency) {
+    case 'diaria':
+      return 'Intervalo de 1 em 1 dia (diariamente)';
+    case 'semanal':
+      return 'Intervalo de 7 em 7 dias (semanalmente)';
+    case 'mensal':
+      return 'Intervalo mensal (a cada ~30 dias)';
+    default:
+      return frequency;
+  }
+}
+
 export function getTypeLabel(type: ExpenseType): string {
   switch (type) {
     case 'emprestimo':

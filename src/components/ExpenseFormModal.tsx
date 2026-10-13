@@ -1,8 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { ExpenseItem, FrequencyType, ExpenseType, Person } from '../types/index.ts';
-import { generateInstallments, syncInstallmentsOnEdit } from '../utils/calculations.ts';
-import { formatCurrency, toDateInputValue } from '../utils/formatters.ts';
-import { X, Calculator, Plus, UserPlus } from 'lucide-react';
+import {
+  generateInstallments,
+  syncInstallmentsOnEdit,
+  calculateDueDate,
+} from '../utils/calculations.ts';
+import {
+  formatCurrency,
+  formatDate,
+  toDateInputValue,
+  getDaysIntervalLabel,
+} from '../utils/formatters.ts';
+import {
+  X,
+  Calculator,
+  Plus,
+  UserPlus,
+  Check,
+  Calendar,
+  Clock,
+  Sparkles,
+  Layers,
+} from 'lucide-react';
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -32,6 +51,9 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   const [startDate, setStartDate] = useState<string>(toDateInputValue(new Date()));
   const [frequency, setFrequency] = useState<FrequencyType>('diaria');
   const [notes, setNotes] = useState<string>('');
+
+  // Set of paid installment numbers (1-indexed) selected in the form
+  const [paidNumbers, setPaidNumbers] = useState<number[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -45,6 +67,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       setStartDate(editingExpense.startDate);
       setFrequency(editingExpense.frequency);
       setNotes(editingExpense.notes || '');
+
+      // Load which installments were already paid in the editing expense
+      const existingPaid = editingExpense.installments
+        .filter((inst) => inst.isPaid)
+        .map((inst) => inst.number);
+      setPaidNumbers(existingPaid);
     } else {
       setPersonId(defaultPersonId || (people[0]?.id || 'person-jonatas'));
       setType('emprestimo');
@@ -55,18 +83,56 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       setStartDate(toDateInputValue(new Date()));
       setFrequency('diaria');
       setNotes('');
+      setPaidNumbers([]); // Start with 0 paid by default for new
     }
     setErrors({});
   }, [editingExpense, isOpen, defaultPersonId, people]);
 
   if (!isOpen) return null;
 
-  // Live calculation preview
+  // Parsed numerical values
   const numOriginal = parseFloat(originalAmount.replace(',', '.')) || 0;
   const numInstallment = parseFloat(installmentAmount.replace(',', '.')) || 0;
-  const numTotalCount = parseInt(totalInstallments, 10) || 0;
+  const numTotalCount = Math.max(1, parseInt(totalInstallments, 10) || 24);
+
+  // Filter paid numbers strictly up to the current totalInstallments count
+  const validPaidNumbers = paidNumbers.filter((n) => n <= numTotalCount);
+  const paidCount = validPaidNumbers.length;
+  const remainingCount = Math.max(0, numTotalCount - paidCount);
+
+  // Live calculations
   const liveTotalScheduled = numInstallment * numTotalCount;
+  const liveTotalPaid = numInstallment * paidCount;
+  const liveRemainingBalance = Math.max(0, liveTotalScheduled - liveTotalPaid);
   const difference = liveTotalScheduled - numOriginal;
+
+  // Calculate start and end dates
+  const calculatedEndDate = calculateDueDate(
+    startDate || toDateInputValue(new Date()),
+    Math.max(0, numTotalCount - 1),
+    frequency
+  );
+
+  // Toggle single installment in the form grid
+  const togglePaidNumber = (num: number) => {
+    setPaidNumbers((prev) => {
+      if (prev.includes(num)) {
+        return prev.filter((n) => n !== num);
+      } else {
+        return [...prev, num].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  // Batch select 1 up to N
+  const setPaidUpTo = (count: number) => {
+    const list: number[] = [];
+    const limit = Math.min(count, numTotalCount);
+    for (let i = 1; i <= limit; i++) {
+      list.push(i);
+    }
+    setPaidNumbers(list);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,13 +162,14 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     const now = new Date().toISOString();
 
     if (editingExpense) {
-      // Sync installments keeping already paid ones intact
+      // Sync installments while applying the explicit paid numbers chosen by the user
       const updatedInstallments = syncInstallmentsOnEdit(
         editingExpense.installments,
         startDate,
         numTotalCount,
         numInstallment,
-        frequency
+        frequency,
+        validPaidNumbers
       );
 
       const updatedItem: ExpenseItem = {
@@ -122,12 +189,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
       onSave(updatedItem);
     } else {
-      // Create fresh new expense with generated installments
+      // Create fresh new expense with generated installments and pre-marked paid numbers
       const freshInstallments = generateInstallments(
         startDate,
         numTotalCount,
         numInstallment,
-        frequency
+        frequency,
+        validPaidNumbers
       );
 
       const newItem: ExpenseItem = {
@@ -158,7 +226,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4"
     >
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]">
+      <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]">
         
         {/* Header */}
         <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -167,7 +235,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               {editingExpense ? 'Editar Despesa / Empréstimo' : 'Cadastrar Nova Despesa'}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Defina os valores e prazos sem cálculos escondidos
+              Configure as parcelas, valores e cotas já pagas diretamente aqui
             </p>
           </div>
           <button
@@ -318,7 +386,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-bold text-slate-700">
-                  Quantidade Total de Parcelas: *
+                  Total de Parcelas: *
                 </label>
                 <div className="flex items-center gap-1">
                   {[6, 12, 24, 36].map((num) => (
@@ -351,9 +419,6 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               {errors.totalInstallments && (
                 <span className="text-rose-600 text-xs mt-1 block">{errors.totalInstallments}</span>
               )}
-              <span className="text-[11px] text-emerald-800 font-medium block mt-1">
-                Gera as parcelas de 1 até {totalInstallments || '24'} com seus respectivos valores
-              </span>
             </div>
 
             <div>
@@ -372,22 +437,171 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             </div>
           </div>
 
-          {/* Data do Primeiro Pagamento */}
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              Data do Primeiro Pagamento (ou Início): *
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className={`w-full px-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
-                errors.startDate ? 'border-rose-400' : 'border-slate-200'
-              }`}
-            />
-            {errors.startDate && (
-              <span className="text-rose-600 text-xs mt-1 block">{errors.startDate}</span>
-            )}
+          {/* Data do Primeiro Pagamento & Informação de Dias */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Data do Primeiro Pagamento (Dia Inicial): *
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={`w-full px-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
+                  errors.startDate ? 'border-rose-400' : 'border-slate-200'
+                }`}
+              />
+              {errors.startDate && (
+                <span className="text-rose-600 text-xs mt-1 block">{errors.startDate}</span>
+              )}
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col justify-center">
+              <span className="text-[11px] text-slate-500 font-medium block">
+                {getDaysIntervalLabel(frequency)}
+              </span>
+              <span className="text-xs font-bold text-slate-800 block mt-1">
+                Término previsto: {formatDate(calculatedEndDate)}
+              </span>
+            </div>
+          </div>
+
+          {/* NOVO: OPÇÃO DE DEFINIR AS COTAS / PARCELAS JÁ PAGAS DE 1 AO 24 */}
+          <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-2xl p-3.5 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-700" />
+                  <label className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                    Cotas / Parcelas Pagas ao Cadastrar:
+                  </label>
+                </div>
+                <p className="text-[11px] text-emerald-800 mt-0.5">
+                  Marque quais parcelas de 1 a {numTotalCount} já foram pagas antecipadamente:
+                </p>
+              </div>
+
+              {/* Sequencial: 1, 2, 3, 4, 5 ... 14 ... 24 */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPaidNumbers([])}
+                  className="px-2 py-1 text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-colors"
+                >
+                  Zerar (0)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaidUpTo(numTotalCount)}
+                  className="px-2 py-1 text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors"
+                >
+                  Todas ({numTotalCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Barra Sequencial de 1 até 24: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ... 24 */}
+            <div>
+              <span className="text-[11px] text-emerald-900 font-semibold block mb-1">
+                Toque no número para pagar da 1 até ele (ex: toque no 14 para pagar da 1 até a 14):
+              </span>
+              <div className="flex items-center gap-1 overflow-x-auto pb-1.5 pt-0.5">
+                {Array.from({ length: numTotalCount }, (_, i) => {
+                  const num = i + 1;
+                  const isPaid = validPaidNumbers.includes(num);
+
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setPaidUpTo(num)}
+                      title={`Marcar da cota 1 até a cota ${num} como pagas`}
+                      className={`min-w-[34px] h-8 px-1.5 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                        isPaid
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white hover:bg-emerald-100 text-slate-800 border border-emerald-300'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Resumo Dinâmico das Cotas Pagas no Cadastro */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
+                <span className="text-slate-500 block text-[11px]">Parcelas Pagas:</span>
+                <span className="font-bold text-emerald-900 font-mono tabular-nums text-sm">
+                  {paidCount} de {numTotalCount}
+                </span>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
+                <span className="text-slate-500 block text-[11px]">Valor Já Pago:</span>
+                <span className="font-bold text-emerald-900 font-mono tabular-nums text-sm">
+                  {formatCurrency(liveTotalPaid)}
+                </span>
+              </div>
+
+              <div className="bg-white p-2.5 rounded-xl border border-emerald-200 col-span-2 sm:col-span-1">
+                <span className="text-slate-500 block text-[11px]">Valor a Pagar:</span>
+                <span className="font-bold text-slate-900 font-mono tabular-nums text-sm">
+                  {formatCurrency(liveRemainingBalance)}
+                </span>
+              </div>
+            </div>
+
+            {/* Grade Interativa de Cotas de 1 a N no próprio cadastro */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] text-emerald-900 font-semibold mb-1.5">
+                <span>Toque nas cotas para marcar/desmarcar:</span>
+                <span>{paidCount} selecionadas</span>
+              </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-48 overflow-y-auto p-1.5 bg-white rounded-xl border border-emerald-200">
+                {Array.from({ length: numTotalCount }, (_, i) => {
+                  const num = i + 1;
+                  const isPaid = validPaidNumbers.includes(num);
+                  const dueDate = calculateDueDate(startDate, i, frequency);
+
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => togglePaidNumber(num)}
+                      className={`min-h-[46px] p-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center cursor-pointer select-none ${
+                        isPaid
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-50 border-slate-200 hover:border-emerald-400 text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-0.5">
+                        {isPaid && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        <span className="text-xs font-bold leading-none">
+                          #{num}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono tabular-nums leading-tight mt-0.5 ${
+                          isPaid ? 'text-emerald-100' : 'text-slate-600 font-medium'
+                        }`}
+                      >
+                        {formatCurrency(numInstallment)}
+                      </span>
+                      <span
+                        className={`text-[9px] leading-none ${
+                          isPaid ? 'text-emerald-200' : 'text-slate-400'
+                        }`}
+                      >
+                        {dueDate.split('-').slice(1).reverse().join('/')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Observações */}
@@ -408,7 +622,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           <div className="bg-slate-100/90 rounded-2xl p-4 border border-slate-200">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-2">
               <Calculator className="w-4 h-4 text-emerald-600" />
-              <span>Cálculo Prévia do Cadastro:</span>
+              <span>Resumo Completo do Cadastro:</span>
             </div>
             <div className="space-y-1.5 text-xs text-slate-600">
               <div className="flex justify-between">
@@ -420,6 +634,18 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               <div className="flex justify-between">
                 <span>Valor original informado:</span>
                 <span className="font-mono tabular-nums">{formatCurrency(numOriginal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Parcelas já pagas ({paidCount}x {formatCurrency(numInstallment)}):</span>
+                <span className="font-mono tabular-nums font-semibold text-emerald-700">
+                  {formatCurrency(liveTotalPaid)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Saldo restante a pagar ({remainingCount} parcelas):</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                  {formatCurrency(liveRemainingBalance)}
+                </span>
               </div>
               <div className="flex justify-between pt-1 border-t border-slate-200 text-slate-700">
                 <span>Diferença apurada:</span>

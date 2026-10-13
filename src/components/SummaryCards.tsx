@@ -32,10 +32,10 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
   const overallProgress = totalScheduled > 0 ? (totalPaid / totalScheduled) * 100 : 0;
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 w-full">
       {/* Banner indicator if filtering by specific person */}
       {activePersonName && (
-        <div className="flex items-center justify-between text-xs text-slate-600 bg-emerald-50/80 border border-emerald-200/60 rounded-xl px-3.5 py-2">
+        <div className="flex items-center justify-between text-xs text-slate-600 bg-emerald-50/80 border border-emerald-200/60 rounded-xl px-3.5 py-2 w-full">
           <span className="font-medium text-emerald-900">
             Exibindo dados de: <strong className="font-bold">{activePersonName}</strong>
           </span>
@@ -46,7 +46,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
       )}
 
       {/* 4 Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
         
         {/* Total Pago */}
         <div className="bg-white border border-emerald-200/80 rounded-2xl p-4 shadow-xs relative overflow-hidden">
@@ -102,7 +102,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           </div>
         </div>
 
-        {/* Despesas Cadastradas & Progresso */}
+        {/* Despesas Cadastradas */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-600 tracking-wide uppercase">
@@ -115,23 +115,33 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
           <div className="mt-2 text-xl sm:text-2xl font-bold text-slate-900 font-mono tabular-nums tracking-tight">
             {totalItemsCount}
           </div>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                style={{ width: `${overallProgress}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-semibold text-emerald-700 tabular-nums font-mono">
-              {overallProgress.toFixed(0)}% pago
-            </span>
+          <div className="mt-1 text-xs text-slate-500">
+            Registros cadastrados
           </div>
         </div>
 
       </div>
 
+      {/* Barra Cheia 100% de Progresso Geral */}
+      <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs mb-2">
+          <span className="font-bold text-slate-800">
+            Progresso Geral dos Pagamentos (Barra Cheia 100%):
+          </span>
+          <span className="font-mono font-bold text-emerald-700 text-xs sm:text-sm">
+            {overallProgress.toFixed(1)}% concluído ({totalPaidInstallments} de {totalAllInstallments} parcelas pagas)
+          </span>
+        </div>
+        <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+          <div
+            className="h-full bg-emerald-600 rounded-full transition-all duration-500 shadow-2xs"
+            style={{ width: `${overallProgress}%` }}
+          />
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 w-full">
         {/* Segmented Filter Buttons */}
         <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium self-start sm:self-auto">
           <button
@@ -170,13 +180,13 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         </div>
 
         {/* Search Input */}
-        <div className="relative flex-1 sm:max-w-xs">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchQueryChange(e.target.value)}
-            placeholder="Buscar despesa ou empréstimo..."
+            placeholder="Buscar por descrição, titular ou notas..."
             className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
           />
           {searchQuery && (
