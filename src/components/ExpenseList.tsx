@@ -271,13 +271,15 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                           >
                             {formatCurrency(displayAmount)}
                           </span>
-                          <span
-                            className={`text-[9px] leading-tight mt-0.5 ${
-                              inst.isPaid ? 'text-emerald-200' : 'text-slate-400'
-                            }`}
-                          >
-                            {inst.dueDate ? inst.dueDate.split('-').slice(1).reverse().join('/') : ''}
-                          </span>
+                          {inst.isPaid ? (
+                            <span className="text-[8px] font-bold text-emerald-100 bg-emerald-700/60 border border-emerald-400/40 px-1 py-0.5 rounded mt-0.5 leading-none">
+                              ✎ Mudar valor
+                            </span>
+                          ) : (
+                            <span className="text-[9px] leading-tight mt-0.5 text-slate-400">
+                              {inst.dueDate ? inst.dueDate.split('-').slice(1).reverse().join('/') : ''}
+                            </span>
+                          )}
                         </button>
                       );
                     })}

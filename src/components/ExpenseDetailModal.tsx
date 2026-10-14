@@ -69,7 +69,13 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
     const val = parseFloat(editingInstallmentVal.replace(',', '.')) || 0;
     if (val <= 0 || !onUpdateExpense) return;
     const updatedInstallments = expense.installments.map((i) =>
-      i.number === instNumber ? { ...i, amount: val } : i
+      i.number === instNumber
+        ? {
+            ...i,
+            amount: val,
+            paidAmount: i.isPaid ? val : i.paidAmount,
+          }
+        : i
     );
     onUpdateExpense({
       ...expense,
@@ -468,6 +474,11 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                       >
                         {formatDate(inst.dueDate)}
                       </span>
+                      {inst.isPaid && (
+                        <span className="mt-1 inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-700/80 border border-emerald-400/50 text-white px-1.5 py-0.5 rounded shadow-2xs">
+                          ✎ Mudar valor
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -606,10 +617,11 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                                 handleStartEditInstallment(inst.number, inst.amount);
                               }
                             }}
-                            className="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                            className="px-2.5 py-1 text-xs font-bold text-amber-950 bg-amber-300 hover:bg-amber-400 border border-amber-400 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
                             title="Colocar o valor que você quiser nesta parcela"
                           >
-                            <Coins className="w-4 h-4" />
+                            <Coins className="w-3.5 h-3.5 text-amber-800" />
+                            <span>Mudar Valor</span>
                           </button>
                         </div>
                       )}

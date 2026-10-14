@@ -406,14 +406,16 @@ function MainApp() {
     if (!item) return;
 
     const now = toDateInputValue(new Date());
+    const wasAlreadyPaid = item.installments.find((i) => i.number === installmentNumber)?.isPaid;
+
     const updatedInstallments = item.installments.map((inst) => {
       if (inst.number !== installmentNumber) return inst;
       return {
         ...inst,
         isPaid: true,
-        paidAt: now,
+        paidAt: inst.paidAt || now,
         paidAmount: amountToPay,
-        amount: updateScheduledAmount ? amountToPay : inst.amount,
+        amount: amountToPay,
         notes: notes !== undefined && notes !== '' ? notes : inst.notes,
       };
     });
@@ -432,7 +434,11 @@ function MainApp() {
       );
     }
 
-    setToastMessage(`✓ Parcela #${installmentNumber} paga com sucesso no valor de ${formatCurrency(amountToPay)}!`);
+    setToastMessage(
+      wasAlreadyPaid
+        ? `✓ Valor pago da parcela #${installmentNumber} alterado para ${formatCurrency(amountToPay)}!`
+        : `✓ Parcela #${installmentNumber} paga no valor de ${formatCurrency(amountToPay)}!`
+    );
     setTimeout(() => {
       setToastMessage(null);
     }, 3500);

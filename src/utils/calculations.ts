@@ -100,9 +100,12 @@ export function calculateExpenseSummary(item: ExpenseItem): ExpenseSummary {
   }, 0);
   
   // Saldo restante das parcelas
-  const remainingBalance = Math.max(0, totalScheduled - totalPaid);
+  const baseTotal = (typeof item.originalAmount === 'number' && item.originalAmount > 0)
+    ? Math.max(item.originalAmount, totalScheduled)
+    : totalScheduled;
+  const remainingBalance = Math.max(0, baseTotal - totalPaid);
   
-  const percentPaid = totalScheduled > 0 ? (totalPaid / totalScheduled) * 100 : 0;
+  const percentPaid = baseTotal > 0 ? (totalPaid / baseTotal) * 100 : 0;
 
   return {
     originalAmount: item.originalAmount,

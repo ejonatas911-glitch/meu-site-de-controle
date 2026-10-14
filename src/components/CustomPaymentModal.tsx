@@ -147,11 +147,15 @@ export const CustomPaymentModal: React.FC<CustomPaymentModalProps> = ({
           
           {/* Custom Value Input */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Qual valor você quer pagar nesta parcela?
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              {installment.isPaid
+                ? 'Valor pago nesta parcela (R$):'
+                : 'Qual valor você quer pagar nesta parcela?'}
             </label>
             <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-              Você tem liberdade total para colocar o valor que puder (ex: R$ 10, R$ 20, R$ 50 ou qualquer outra quantia).
+              {installment.isPaid
+                ? 'Você pode colocar o valor que quiser que foi pago! Se não pôde pagar os R$ 34 e deu outro valor (ex: R$ 15, R$ 20, R$ 50), digite aqui:'
+                : 'Você tem liberdade total para colocar o valor que puder hoje (ex: R$ 10, R$ 20, R$ 50 ou qualquer quantia):'}
             </p>
 
             <div className="relative">
@@ -241,7 +245,9 @@ export const CustomPaymentModal: React.FC<CustomPaymentModalProps> = ({
             >
               <Check className="w-5 h-5 stroke-[2.5]" />
               <span>
-                Confirmar Pagamento de {currentNumericValue > 0 ? formatCurrency(currentNumericValue) : 'este valor'}
+                {installment.isPaid
+                  ? `Salvar Valor Pago de ${currentNumericValue > 0 ? formatCurrency(currentNumericValue) : 'este valor'}`
+                  : `Confirmar Pagamento de ${currentNumericValue > 0 ? formatCurrency(currentNumericValue) : 'este valor'}`}
               </span>
             </button>
 
