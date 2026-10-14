@@ -466,10 +466,12 @@ git push -u origin main`;
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-500">
           <div className="flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5 text-emerald-600" />
             <span className="font-semibold text-slate-700">Repositório Público no GitHub</span>
+            <span className="text-slate-300 hidden sm:inline">•</span>
+            <span className="text-emerald-800 font-bold hidden sm:inline">® App feito por Jonatas Eduardo</span>
           </div>
           <button
             type="button"

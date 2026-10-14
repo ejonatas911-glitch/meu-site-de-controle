@@ -21,6 +21,7 @@ import {
   Clock,
   Sparkles,
   Layers,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface ExpenseFormModalProps {
@@ -45,11 +46,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   const [personId, setPersonId] = useState<string>(defaultPersonId);
   const [type, setType] = useState<ExpenseType>('emprestimo');
   const [title, setTitle] = useState<string>('');
-  const [originalAmount, setOriginalAmount] = useState<string>('500');
-  const [installmentAmount, setInstallmentAmount] = useState<string>('25');
-  const [totalInstallments, setTotalInstallments] = useState<string>('24');
+  const [originalAmount, setOriginalAmount] = useState<string>('');
+  const [installmentAmount, setInstallmentAmount] = useState<string>('');
+  const [totalInstallments, setTotalInstallments] = useState<string>('12');
   const [startDate, setStartDate] = useState<string>(toDateInputValue(new Date()));
-  const [frequency, setFrequency] = useState<FrequencyType>('diaria');
+  const [frequency, setFrequency] = useState<FrequencyType>('mensal');
   const [notes, setNotes] = useState<string>('');
 
   // Set of paid installment numbers (1-indexed) selected in the form
@@ -77,11 +78,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       setPersonId(defaultPersonId || (people[0]?.id || 'person-jonatas'));
       setType('emprestimo');
       setTitle('');
-      setOriginalAmount('500');
-      setInstallmentAmount('25');
-      setTotalInstallments('24');
+      setOriginalAmount('');
+      setInstallmentAmount('');
+      setTotalInstallments('12');
       setStartDate(toDateInputValue(new Date()));
-      setFrequency('diaria');
+      setFrequency('mensal');
       setNotes('');
       setPaidNumbers([]); // Start with 0 paid by default for new
     }
@@ -93,18 +94,42 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   // Parsed numerical values
   const numOriginal = parseFloat(originalAmount.replace(',', '.')) || 0;
   const numInstallment = parseFloat(installmentAmount.replace(',', '.')) || 0;
-  const numTotalCount = Math.max(1, parseInt(totalInstallments, 10) || 24);
+  const numTotalCount = Math.max(1, parseInt(totalInstallments, 10) || 12);
+
+  // Quick auto-calculation helpers
+  const handleAutoDivide = () => {
+    if (numOriginal > 0 && numTotalCount > 0) {
+      const perInst = (numOriginal / numTotalCount).toFixed(2);
+      setInstallmentAmount(perInst.replace('.', ','));
+    }
+  };
+
+  const handleAutoMultiply = () => {
+    if (numInstallment > 0 && numTotalCount > 0) {
+      const tot = (numInstallment * numTotalCount).toFixed(2);
+      setOriginalAmount(tot.replace('.', ','));
+    }
+  };
+
+  const handleApplyPresetAmount = (val: number) => {
+    setOriginalAmount(String(val));
+    const perInst = (val / numTotalCount).toFixed(2);
+    setInstallmentAmount(perInst.replace('.', ','));
+  };
 
   // Filter paid numbers strictly up to the current totalInstallments count
   const validPaidNumbers = paidNumbers.filter((n) => n <= numTotalCount);
   const paidCount = validPaidNumbers.length;
   const remainingCount = Math.max(0, numTotalCount - paidCount);
 
-  // Live calculations
-  const liveTotalScheduled = numInstallment * numTotalCount;
-  const liveTotalPaid = numInstallment * paidCount;
+  // Live calculations (fallback to auto-derived if user only typed one of the values)
+  const effectiveInstallment = numInstallment > 0 ? numInstallment : (numOriginal > 0 ? numOriginal / numTotalCount : 0);
+  const effectiveOriginal = numOriginal > 0 ? numOriginal : (numInstallment > 0 ? numInstallment * numTotalCount : 0);
+
+  const liveTotalScheduled = (numInstallment > 0 ? numInstallment : effectiveInstallment) * numTotalCount;
+  const liveTotalPaid = (numInstallment > 0 ? numInstallment : effectiveInstallment) * paidCount;
   const liveRemainingBalance = Math.max(0, liveTotalScheduled - liveTotalPaid);
-  const difference = liveTotalScheduled - numOriginal;
+  const difference = liveTotalScheduled - (numOriginal > 0 ? numOriginal : effectiveOriginal);
 
   // Calculate start and end dates
   const calculatedEndDate = calculateDueDate(
@@ -138,16 +163,28 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
+    let finalOriginal = parseFloat(originalAmount.replace(',', '.')) || 0;
+    let finalInstallment = parseFloat(installmentAmount.replace(',', '.')) || 0;
+    const finalCount = Math.max(1, parseInt(totalInstallments, 10) || 1);
+
+    // Auto-complete if user entered only total or only installment
+    if (finalOriginal > 0 && finalInstallment <= 0) {
+      finalInstallment = Math.round((finalOriginal / finalCount) * 100) / 100;
+    }
+    if (finalInstallment > 0 && finalOriginal <= 0) {
+      finalOriginal = Math.round((finalInstallment * finalCount) * 100) / 100;
+    }
+
     if (!title.trim()) {
       newErrors.title = 'Informe um nome ou descrição da despesa.';
     }
-    if (numOriginal <= 0) {
-      newErrors.originalAmount = 'Informe um valor original maior que zero.';
+    if (finalOriginal <= 0) {
+      newErrors.originalAmount = 'Informe um valor original (digite o valor que você quiser).';
     }
-    if (numInstallment <= 0) {
-      newErrors.installmentAmount = 'Informe um valor de parcela maior que zero.';
+    if (finalInstallment <= 0) {
+      newErrors.installmentAmount = 'Informe o valor da parcela (ou use o botão calcular).';
     }
-    if (numTotalCount <= 0 || numTotalCount > 360) {
+    if (finalCount <= 0 || finalCount > 360) {
       newErrors.totalInstallments = 'A quantidade de parcelas deve ser entre 1 e 360.';
     }
     if (!startDate) {
@@ -166,8 +203,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       const updatedInstallments = syncInstallmentsOnEdit(
         editingExpense.installments,
         startDate,
-        numTotalCount,
-        numInstallment,
+        finalCount,
+        finalInstallment,
         frequency,
         validPaidNumbers
       );
@@ -177,9 +214,9 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         personId,
         type,
         title: title.trim(),
-        originalAmount: numOriginal,
-        installmentAmount: numInstallment,
-        totalInstallments: numTotalCount,
+        originalAmount: finalOriginal,
+        installmentAmount: finalInstallment,
+        totalInstallments: finalCount,
         startDate,
         frequency,
         notes: notes.trim(),
@@ -192,8 +229,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       // Create fresh new expense with generated installments and pre-marked paid numbers
       const freshInstallments = generateInstallments(
         startDate,
-        numTotalCount,
-        numInstallment,
+        finalCount,
+        finalInstallment,
         frequency,
         validPaidNumbers
       );
@@ -203,9 +240,9 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         personId,
         type,
         title: title.trim(),
-        originalAmount: numOriginal,
-        installmentAmount: numInstallment,
-        totalInstallments: numTotalCount,
+        originalAmount: finalOriginal,
+        installmentAmount: finalInstallment,
+        totalInstallments: finalCount,
         startDate,
         frequency,
         notes: notes.trim(),
@@ -231,11 +268,17 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              {editingExpense ? 'Editar Despesa / Empréstimo' : 'Cadastrar Nova Despesa'}
-            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingExpense ? 'Editar Despesa / Empréstimo' : 'Cadastrar Nova Despesa'}
+              </h3>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 border border-amber-200 text-amber-950">
+                <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span>App feito por Jonatas Eduardo ®</span>
+              </span>
+            </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Configure as parcelas, valores e cotas já pagas diretamente aqui
+              Defina o valor que quiser livremente, calcule parcelas e organize pagamentos
             </p>
           </div>
           <button
@@ -328,56 +371,156 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             )}
           </div>
 
-          {/* Valor Original & Valor de Cada Parcela */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Valor Original (R$): *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-medium">
-                  R$
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={originalAmount}
-                  onChange={(e) => setOriginalAmount(e.target.value)}
-                  placeholder="500,00"
-                  className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
-                    errors.originalAmount ? 'border-rose-400' : 'border-slate-200'
-                  }`}
-                />
-              </div>
-              {errors.originalAmount && (
-                <span className="text-rose-600 text-xs mt-1 block">{errors.originalAmount}</span>
+          {/* Opção de Valor Livre (Coloque o valor que você quiser) */}
+          <div className="bg-slate-50/80 rounded-2xl p-3 sm:p-4 border border-slate-200/90 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Definição de Valores (Valor Livre à sua Escolha):</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                Digite qualquer valor ou use os atalhos
+              </span>
+            </div>
+
+            {/* Quick chips para preenchimento rápido opcional */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-slate-500">Valores rápidos:</span>
+              {[100, 300, 500, 1000, 2500, 5000].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => handleApplyPresetAmount(val)}
+                  className="px-2 py-0.5 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 border border-slate-200 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer"
+                  title={`Definir valor original como R$ ${val}`}
+                >
+                  R$ {val >= 1000 ? `${val / 1000}k` : val}
+                </button>
+              ))}
+              {(originalAmount || installmentAmount) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOriginalAmount('');
+                    setInstallmentAmount('');
+                  }}
+                  className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-medium transition-colors"
+                >
+                  Limpar
+                </button>
               )}
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Valor de Cada Parcela (R$): *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-medium">
-                  R$
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={installmentAmount}
-                  onChange={(e) => setInstallmentAmount(e.target.value)}
-                  placeholder="25,00"
-                  className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-mono text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
-                    errors.installmentAmount ? 'border-rose-400' : 'border-slate-200'
-                  }`}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Valor Original / Total */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Valor Total / Original (R$): *
+                  </label>
+                  {numOriginal > 0 && numTotalCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleAutoDivide}
+                      className="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 underline"
+                      title="Calcular automaticamente quanto fica por parcela"
+                    >
+                      <span>⚡ Dividir em {numTotalCount}x</span>
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold font-mono">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={originalAmount}
+                    onChange={(e) => setOriginalAmount(e.target.value)}
+                    placeholder="Ex: 1500,00 ou qualquer valor"
+                    className={`w-full pl-9 pr-8 py-2.5 bg-white border rounded-xl text-sm font-mono font-semibold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
+                      errors.originalAmount ? 'border-rose-400' : 'border-slate-300'
+                    }`}
+                  />
+                  {originalAmount && (
+                    <button
+                      type="button"
+                      onClick={() => setOriginalAmount('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold p-1"
+                      title="Limpar campo"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {errors.originalAmount && (
+                  <span className="text-rose-600 text-xs mt-1 block">{errors.originalAmount}</span>
+                )}
+                {numOriginal > 0 && numTotalCount > 0 && (
+                  <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Média por parcela:</span>
+                    <strong className="text-slate-800 font-mono">
+                      {formatCurrency(numOriginal / numTotalCount)} cada
+                    </strong>
+                  </div>
+                )}
               </div>
-              {errors.installmentAmount && (
-                <span className="text-rose-600 text-xs mt-1 block">{errors.installmentAmount}</span>
-              )}
+
+              {/* Valor de Cada Parcela */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Valor de Cada Parcela (R$): *
+                  </label>
+                  {numInstallment > 0 && numTotalCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleAutoMultiply}
+                      className="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 underline"
+                      title="Calcular o valor total multiplicando a parcela pela quantidade"
+                    >
+                      <span>⚡ Calcular Total ({numTotalCount}x)</span>
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold font-mono">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={installmentAmount}
+                    onChange={(e) => setInstallmentAmount(e.target.value)}
+                    placeholder="Ex: 125,00 ou calcular"
+                    className={`w-full pl-9 pr-8 py-2.5 bg-white border rounded-xl text-sm font-mono font-semibold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${
+                      errors.installmentAmount ? 'border-rose-400' : 'border-slate-300'
+                    }`}
+                  />
+                  {installmentAmount && (
+                    <button
+                      type="button"
+                      onClick={() => setInstallmentAmount('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold p-1"
+                      title="Limpar campo"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {errors.installmentAmount && (
+                  <span className="text-rose-600 text-xs mt-1 block">{errors.installmentAmount}</span>
+                )}
+                {numInstallment > 0 && numTotalCount > 0 && (
+                  <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Total previsto ({numTotalCount}x):</span>
+                    <strong className="text-slate-800 font-mono">
+                      {formatCurrency(numInstallment * numTotalCount)}
+                    </strong>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -656,22 +799,29 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             </div>
           </div>
 
-          {/* Bottom buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{editingExpense ? 'Salvar Alterações' : 'Cadastrar Despesa'}</span>
-            </button>
+          {/* Bottom buttons & Trademark */}
+          <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>® App feito por Jonatas Eduardo • Marca Registrada</span>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{editingExpense ? 'Salvar Alterações' : 'Cadastrar Despesa'}</span>
+              </button>
+            </div>
           </div>
 
         </form>

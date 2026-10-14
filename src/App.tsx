@@ -632,6 +632,7 @@ function MainApp() {
             setSelectedExpenseId(null);
             handleEditExpense(item);
           }}
+          onUpdateExpense={handleSaveExpense}
         />
       )}
 
@@ -676,11 +677,37 @@ function MainApp() {
         onClose={() => setIsGitHubOpen(false)}
       />
 
-      {/* PWA Android Install Modal */}
-      <PWAInstallModal
-        isOpen={isPWAInstallOpen}
-        onClose={() => setIsPWAInstallOpen(false)}
-      />
+      {/* Global Application Footer with Trademark */}
+      <footer className="w-full bg-white border-t border-slate-200/80 py-4 sm:py-5 px-3 sm:px-6 lg:px-8 mt-auto z-10">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+            <div className="w-6 h-6 rounded-lg overflow-hidden bg-[#0B192C] p-0.5 border border-amber-400/40 shrink-0">
+              <img
+                src="/icons/icon-192x192.png"
+                alt="Logo"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+            <span className="font-bold text-slate-800">
+              Meu Controle de Parcelas <span className="text-amber-500 font-extrabold">®</span>
+            </span>
+            <span className="hidden sm:inline text-slate-300">•</span>
+            <span className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md text-[11px] shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              App feito por Jonatas Eduardo ®
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <span>Marca Registrada</span>
+            <span>•</span>
+            <span>Todos os direitos reservados</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

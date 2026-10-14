@@ -50,17 +50,20 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 leading-tight">
-                    Meu Controle de Parcelas
+                    Meu Controle de Parcelas <span className="text-amber-500 font-extrabold text-base align-super">®</span>
                   </h1>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-0.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="text-emerald-700 font-semibold tracking-wide">
-                    Sistema de Jonatas Eduardo
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 border border-amber-300/80 text-amber-950 shadow-2xs">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>App feito por Jonatas Eduardo ®</span>
                   </span>
-                  <span className="text-slate-300">·</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-1">
+                  <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">
+                    Marca Registrada
+                  </span>
+                  <span className="text-slate-300 hidden sm:inline">·</span>
                   {currentUser ? (
                     <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
                       <CloudCheck className="w-3.5 h-3.5" />

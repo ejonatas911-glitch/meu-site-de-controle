@@ -142,41 +142,47 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 w-full">
-        {/* Segmented Filter Buttons */}
-        <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              statusFilter === 'all'
-                ? 'bg-white text-slate-900 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Todas ({totalItemsCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange('active')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              statusFilter === 'active'
-                ? 'bg-white text-slate-900 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Em Aberto
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange('completed')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              statusFilter === 'completed'
-                ? 'bg-white text-slate-900 font-semibold shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Quitadas
-          </button>
+        {/* Segmented Filter Buttons + Trademark */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => onStatusFilterChange('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                statusFilter === 'all'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Todas ({totalItemsCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => onStatusFilterChange('active')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                statusFilter === 'active'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Em Aberto
+            </button>
+            <button
+              type="button"
+              onClick={() => onStatusFilterChange('completed')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                statusFilter === 'completed'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Quitadas
+            </button>
+          </div>
+
+          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] font-bold shadow-2xs">
+            <span>® App feito por Jonatas Eduardo</span>
+          </div>
         </div>
 
         {/* Search Input */}

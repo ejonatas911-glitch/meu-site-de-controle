@@ -79,15 +79,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Meu Controle de Parcelas
+              Meu Controle de Parcelas <span className="text-amber-400 font-extrabold">®</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Controle Financeiro Seguro
-            </p>
-
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-semibold">
-              <Lock className="w-3 h-3" />
-              <span>Acesso Restrito</span>
+            <div className="mt-1 flex items-center justify-center gap-1.5">
+              <span className="inline-flex items-center gap-1 font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full text-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>App feito por Jonatas Eduardo ®</span>
+              </span>
             </div>
           </div>
 
@@ -204,10 +202,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
           </div>
         )}
 
-        {/* Footer info */}
-        <p className="mt-6 text-center text-[11px] text-slate-500">
-          Meu Controle de Parcelas • Sistema seguro com armazenamento protegido.
-        </p>
+        {/* Footer info & Trademark */}
+        <div className="mt-6 text-center space-y-1 text-[11px] text-slate-500">
+          <p className="font-semibold text-slate-400">
+            ® App feito por Jonatas Eduardo • Marca Registrada
+          </p>
+          <p className="text-slate-500 text-[10px]">
+            Meu Controle de Parcelas ® • Sistema seguro com armazenamento protegido
+          </p>
+        </div>
       </div>
     </div>
   );

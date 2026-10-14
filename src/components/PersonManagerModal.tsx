@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Person, ExpenseItem } from '../types/index.ts';
-import { X, UserPlus, Users, Trash2, Edit2, Check, Star } from 'lucide-react';
+import { X, UserPlus, Users, Trash2, Edit2, Check, Star, ShieldCheck } from 'lucide-react';
 
 interface PersonManagerModalProps {
   isOpen: boolean;
@@ -210,7 +210,12 @@ export const PersonManagerModal: React.FC<PersonManagerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-right">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>® App feito por Jonatas Eduardo • Marca Registrada</span>
+          </div>
+
           <button
             type="button"
             onClick={onClose}
