@@ -772,13 +772,17 @@ function MainApp() {
         />
       )}
 
-      {/* Custom Payment Modal (Colocar o valor que quiser na parcela) */}
+      {/* Custom Payment Modal (Colocar o valor que quiser na parcela com rolagem de 1 a 50) */}
       {customPaymentData && (
         <CustomPaymentModal
           isOpen={!!customPaymentData}
           onClose={() => setCustomPaymentData(null)}
           expenseTitle={customPaymentData.expense.title}
           installment={customPaymentData.installment}
+          allInstallments={customPaymentData.expense.installments}
+          onSelectInstallment={(newInst) =>
+            setCustomPaymentData((prev) => (prev ? { ...prev, installment: newInst } : null))
+          }
           defaultInstallmentAmount={customPaymentData.expense.installmentAmount}
           onConfirmPayment={handleConfirmCustomPayment}
           onUnmarkPayment={handleUnmarkCustomPayment}

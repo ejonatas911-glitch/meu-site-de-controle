@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ExpenseItem, Person, Installment } from '../types/index.ts';
 import { calculateExpenseSummary } from '../utils/calculations.ts';
+import { InstallmentsRoll } from './InstallmentsRoll.tsx';
 import {
   formatCurrency,
   formatDate,
@@ -22,6 +23,7 @@ import {
   Edit3,
   Coins,
   Banknote,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface ExpenseDetailModalProps {
@@ -52,7 +54,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   onOpenCustomPayment,
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'unpaid' | 'paid'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); // Default to grid for 1 to 24 clarity
+  const [viewMode, setViewMode] = useState<'roll' | 'list'>('roll'); // Default to roll (1 ao 50) as requested by user
   const [selectedUpTo, setSelectedUpTo] = useState<number>(5);
   const [editingInstallmentNum, setEditingInstallmentNum] = useState<number | null>(null);
   const [editingInstallmentVal, setEditingInstallmentVal] = useState<string>('');
@@ -314,31 +316,33 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
           {/* View mode toggle + Fast Actions */}
           <div className="flex items-center gap-1.5">
-            {/* View Mode (Grid vs List) */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-lg text-xs">
+            {/* View Mode (Rolagem vs Lista) */}
+            <div className="inline-flex p-1 bg-slate-100 rounded-lg text-xs items-center gap-1">
               <button
                 type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-white text-emerald-700 font-bold shadow-2xs'
+                onClick={() => setViewMode('roll')}
+                className={`px-2.5 py-1 rounded-md transition-colors font-bold flex items-center gap-1 cursor-pointer ${
+                  viewMode === 'roll'
+                    ? 'bg-white text-emerald-800 shadow-2xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
-                title="Visualização em Grade 1 a 24"
+                title={`Visualização em Rolagem de 1 a ${expense.totalInstallments}`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Rolagem 1 ao {expense.totalInstallments}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-colors ${
+                className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer ${
                   viewMode === 'list'
-                    ? 'bg-white text-emerald-700 font-bold shadow-2xs'
+                    ? 'bg-white text-emerald-800 font-bold shadow-2xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title="Visualização em Lista Detalhada"
               >
                 <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lista</span>
               </button>
             </div>
 
@@ -418,71 +422,19 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             <div className="py-12 text-center text-slate-400 text-sm">
               Nenhuma parcela para a visualização selecionada.
             </div>
-          ) : viewMode === 'grid' ? (
-            /* Visual Grid of Installments 1 to 24 with values */
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-              {filteredInstallments.map((inst) => {
-                const isNext = !inst.isPaid && nextUnpaid?.number === inst.number;
-                const displayAmt =
-                  inst.isPaid && typeof inst.paidAmount === 'number'
-                    ? inst.paidAmount
-                    : inst.amount;
-
-                return (
-                  <button
-                    key={inst.number}
-                    type="button"
-                    onClick={() => {
-                      if (onOpenCustomPayment) {
-                        onOpenCustomPayment(expense, inst);
-                      } else {
-                        onToggleInstallment(expense.id, inst.number);
-                      }
-                    }}
-                    title={`Parcela ${inst.number}: ${formatCurrency(displayAmt)} - Toque para pagar ou colocar o valor que você quiser`}
-                    className={`min-h-[68px] p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-between cursor-pointer select-none group relative ${
-                      inst.isPaid
-                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                        : isNext
-                        ? 'bg-amber-50 border-amber-300 text-slate-900 ring-2 ring-amber-400/30'
-                        : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-900 hover:bg-emerald-50/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {inst.isPaid ? (
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                      )}
-                      <span className="text-xs font-bold">
-                        Parcela {inst.number}
-                      </span>
-                    </div>
-
-                    <div className="mt-1">
-                      <span
-                        className={`text-xs font-bold font-mono tabular-nums block ${
-                          inst.isPaid ? 'text-emerald-100' : 'text-slate-900'
-                        }`}
-                      >
-                        {formatCurrency(displayAmt)}
-                      </span>
-                      <span
-                        className={`text-[10px] block leading-tight ${
-                          inst.isPaid ? 'text-emerald-200' : 'text-slate-400'
-                        }`}
-                      >
-                        {formatDate(inst.dueDate)}
-                      </span>
-                      {inst.isPaid && (
-                        <span className="mt-1 inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-700/80 border border-emerald-400/50 text-white px-1.5 py-0.5 rounded shadow-2xs">
-                          ✎ Mudar valor
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+          ) : viewMode === 'roll' ? (
+            /* Rolagem Interativa de Parcelas 1 ao 50 (substitui os quadradinhos) */
+            <div className="space-y-4">
+              <InstallmentsRoll
+                installments={filteredInstallments}
+                onPayOrOpenCustom={(inst) => {
+                  if (onOpenCustomPayment) {
+                    onOpenCustomPayment(expense, inst);
+                  } else {
+                    onToggleInstallment(expense.id, inst.number);
+                  }
+                }}
+              />
             </div>
           ) : (
             /* Detailed Row List */

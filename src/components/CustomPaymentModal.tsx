@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Installment } from '../types/index.ts';
 import { formatCurrency, formatDate } from '../utils/formatters.ts';
+import { InstallmentsRoll } from './InstallmentsRoll.tsx';
 import {
   X,
   Check,
@@ -17,6 +18,8 @@ interface CustomPaymentModalProps {
   onClose: () => void;
   expenseTitle: string;
   installment: Installment | null;
+  allInstallments?: Installment[];
+  onSelectInstallment?: (inst: Installment) => void;
   defaultInstallmentAmount: number;
   onConfirmPayment: (
     installmentNumber: number,
@@ -33,6 +36,8 @@ export const CustomPaymentModal: React.FC<CustomPaymentModalProps> = ({
   onClose,
   expenseTitle,
   installment,
+  allInstallments,
+  onSelectInstallment,
   defaultInstallmentAmount,
   onConfirmPayment,
   onUnmarkPayment,
@@ -141,6 +146,22 @@ export const CustomPaymentModal: React.FC<CustomPaymentModalProps> = ({
             <span>Previsto: {formatCurrency(originalScheduled)}</span>
           </div>
         </div>
+
+        {/* Rolagem de 1 a N / 1 ao 50 dentro do próprio modal de pagamento */}
+        {allInstallments && allInstallments.length > 0 && (
+          <div className="px-3 sm:px-4 py-2.5 bg-emerald-900 border-b border-emerald-800">
+            <InstallmentsRoll
+              compact
+              installments={allInstallments}
+              selectedNumber={installment.number}
+              onSelectInstallment={(selectedInst) => {
+                if (onSelectInstallment) {
+                  onSelectInstallment(selectedInst);
+                }
+              }}
+            />
+          </div>
+        )}
 
         {/* Content */}
         <form onSubmit={handleSubmitPayment} className="p-5 sm:p-6 space-y-5">
