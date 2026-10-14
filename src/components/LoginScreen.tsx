@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight, Smartphone, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight, Smartphone, KeyRound, AlertCircle } from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (username: string) => void;
@@ -27,8 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
     const cleanUser = username.trim();
     const cleanPass = password;
 
-    // Check credentials:
-    // Official user: Jonfx123@ (also accepting case-insensitive or without @ for user convenience)
+    // Validação sigilosa das credenciais oficiais
     const isUserValid =
       cleanUser === OFFICIAL_USER ||
       cleanUser.toLowerCase() === OFFICIAL_USER.toLowerCase() ||
@@ -49,21 +48,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
         onLoginSuccess(OFFICIAL_USER);
       } else {
         setIsSubmitting(false);
-        if (!isUserValid && !isPassValid) {
-          setErrorMessage('Usuário e senha incorretos.');
-        } else if (!isUserValid) {
-          setErrorMessage('Usuário incorreto. O usuário oficial é Jonfx123@');
-        } else {
-          setErrorMessage('Senha incorreta. A senha oficial é Jonfx123');
-        }
+        // Mensagem padrão e segura sem expor nenhum dado confidencial
+        setErrorMessage('Usuário ou senha incorretos.');
       }
     }, 250);
-  };
-
-  const handleFillDemoCredentials = () => {
-    setUsername(OFFICIAL_USER);
-    setPassword(OFFICIAL_PASS);
-    setErrorMessage(null);
   };
 
   return (
@@ -94,29 +82,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
               Meu Controle de Parcelas
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Sistema Pessoal de Jonatas Eduardo
+              Controle Financeiro Seguro
             </p>
 
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-semibold">
               <Lock className="w-3 h-3" />
-              <span>Área de Acesso Restrito</span>
+              <span>Acesso Restrito</span>
             </div>
           </div>
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="mb-5 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-xs text-rose-300 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-              <div className="flex-1">
-                <span className="font-semibold block">{errorMessage}</span>
-                <button
-                  type="button"
-                  onClick={handleFillDemoCredentials}
-                  className="mt-1 text-amber-300 hover:text-amber-200 underline font-medium"
-                >
-                  Preencher dados oficiais automaticamente
-                </button>
-              </div>
+            <div className="mb-5 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center gap-2.5 text-xs text-rose-300 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span className="font-semibold">{errorMessage}</span>
             </div>
           )}
 
@@ -135,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Jonfx123@"
+                  placeholder="Digite seu usuário"
                   required
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -147,18 +126,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
 
             {/* Password Input */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-300">
-                  Senha
-                </label>
-                <button
-                  type="button"
-                  onClick={handleFillDemoCredentials}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 font-medium transition-colors"
-                >
-                  Preencher oficial
-                </button>
-              </div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Senha
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <KeyRound className="w-4 h-4" />
@@ -167,14 +137,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite sua senha oficial"
+                  placeholder="Digite sua senha"
                   required
                   className="w-full pl-10 pr-11 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
                   title={showPassword ? 'Ocultar senha' : 'Ver senha'}
                 >
                   {showPassword ? (
@@ -195,7 +165,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-slate-900 cursor-pointer"
                 />
-                <span>Manter conectado neste celular/PC</span>
+                <span>Manter conectado neste dispositivo</span>
               </label>
             </div>
 
@@ -208,7 +178,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  <span>Verificando credenciais...</span>
+                  <span>Verificando...</span>
                 </>
               ) : (
                 <>
@@ -218,21 +188,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
               )}
             </button>
           </form>
-
-          {/* Quick Info Box */}
-          <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-[11px] text-slate-400">
-              <div className="text-slate-300 font-semibold mb-1 flex items-center justify-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Credenciais Oficiais Configuradas</span>
-              </div>
-              <p>
-                Usuário: <code className="text-amber-400 font-mono font-bold bg-slate-950/70 px-1.5 py-0.5 rounded">{OFFICIAL_USER}</code>
-                {' • '}
-                Senha: <code className="text-amber-400 font-mono font-bold bg-slate-950/70 px-1.5 py-0.5 rounded">{OFFICIAL_PASS}</code>
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* PWA Install Button from Login Screen */}
@@ -241,7 +196,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
             <button
               type="button"
               onClick={onOpenInstallPWA}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-700/60 shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-700/60 shadow-sm cursor-pointer"
             >
               <Smartphone className="w-3.5 h-3.5 text-amber-400" />
               <span>Instalar Aplicativo no Celular (Android)</span>
@@ -251,7 +206,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
 
         {/* Footer info */}
         <p className="mt-6 text-center text-[11px] text-slate-500">
-          Meu Controle de Parcelas • Dados protegidos com criptografia e armazenamento local seguro.
+          Meu Controle de Parcelas • Sistema seguro com armazenamento protegido.
         </p>
       </div>
     </div>

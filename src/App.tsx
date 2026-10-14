@@ -66,8 +66,8 @@ function MainApp() {
 
   const handleLoginSuccess = (user: string) => {
     setAppUser(user);
-    setToastMessage(`Acesso liberado! Bem-vindo, ${user}`);
-    setTimeout(() => setToastMessage(null), 3500);
+    setToastMessage('Acesso liberado com sucesso!');
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleLogoutApp = () => {

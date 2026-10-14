@@ -1,6 +1,6 @@
 import React from 'react';
 import { Person } from '../types/index.ts';
-import { Plus, Users, Download, WalletCards, ShieldCheck, Cloud, CloudCheck, LogIn, LogOut, FolderGit2, Smartphone } from 'lucide-react';
+import { Plus, Users, Download, WalletCards, ShieldCheck, Cloud, CloudCheck, LogIn, LogOut, FolderGit2, Smartphone, Lock } from 'lucide-react';
 import { useAuth } from '../firebase/AuthContext.tsx';
 
 interface HeaderProps {
@@ -162,24 +162,18 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* System App User Badge & Logout */}
-            {currentAppUser && (
-              <div className="flex items-center gap-1.5 bg-[#0B192C] text-white border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs shadow-2xs">
+            {/* System App Lock / Logout (Sem exibir o nome de usuário) */}
+            {currentAppUser && onLogoutApp && (
+              <button
+                type="button"
+                onClick={onLogoutApp}
+                title="Bloquear aplicativo e encerrar sessão"
+                className="h-9 px-3 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              >
                 <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span className="font-mono font-bold text-amber-300 truncate max-w-[100px] sm:max-w-none">
-                  {currentAppUser}
-                </span>
-                {onLogoutApp && (
-                  <button
-                    type="button"
-                    onClick={onLogoutApp}
-                    title="Sair do sistema (Bloquear tela)"
-                    className="p-1 ml-0.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Bloquear</span>
+              </button>
             )}
 
             {/* Actions: Instalar PWA, GitHub, Backup and Desktop "+ Nova Despesa" */}
