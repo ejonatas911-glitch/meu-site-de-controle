@@ -20,6 +20,7 @@ import { PersonManagerModal } from './components/PersonManagerModal.tsx';
 import { BackupModal } from './components/BackupModal.tsx';
 import { GitHubModal } from './components/GitHubModal.tsx';
 import { PWAInstallModal } from './components/PWAInstallModal.tsx';
+import { LoginScreen, AUTH_STORAGE_KEY, AUTH_REMEMBER_KEY } from './components/LoginScreen.tsx';
 import { AuthProvider, useAuth } from './firebase/AuthContext.tsx';
 import {
   subscribeUserPeople,
@@ -49,6 +50,36 @@ function MainApp() {
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isPWAInstallOpen, setIsPWAInstallOpen] = useState(false);
+
+  // App Login Area (Usuário: Jonfx123@ / Senha: Jonfx123)
+  const [appUser, setAppUser] = useState<string | null>(() => {
+    try {
+      return (
+        localStorage.getItem(AUTH_STORAGE_KEY) ||
+        sessionStorage.getItem(AUTH_STORAGE_KEY) ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLoginSuccess = (user: string) => {
+    setAppUser(user);
+    setToastMessage(`Acesso liberado! Bem-vindo, ${user}`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleLogoutApp = () => {
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(AUTH_REMEMBER_KEY);
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch (e) {
+      console.warn(e);
+    }
+    setAppUser(null);
+  };
 
   const initialSyncDone = useRef(false);
 
@@ -438,6 +469,22 @@ function MainApp() {
     }
   };
 
+  // If not logged into the app, show dedicated Login Area
+  if (!appUser) {
+    return (
+      <>
+        <LoginScreen
+          onLoginSuccess={handleLoginSuccess}
+          onOpenInstallPWA={() => setIsPWAInstallOpen(true)}
+        />
+        <PWAInstallModal
+          isOpen={isPWAInstallOpen}
+          onClose={() => setIsPWAInstallOpen(false)}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased">
       {/* Top Header */}
@@ -450,6 +497,8 @@ function MainApp() {
         onOpenBackup={() => setIsBackupOpen(true)}
         onOpenGitHub={() => setIsGitHubOpen(true)}
         onOpenInstallPWA={() => setIsPWAInstallOpen(true)}
+        currentAppUser={appUser}
+        onLogoutApp={handleLogoutApp}
       />
 
       {/* Floating Save Success Toast */}

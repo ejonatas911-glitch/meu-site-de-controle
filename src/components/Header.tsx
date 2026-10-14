@@ -12,6 +12,8 @@ interface HeaderProps {
   onOpenBackup: () => void;
   onOpenGitHub: () => void;
   onOpenInstallPWA: () => void;
+  currentAppUser?: string;
+  onLogoutApp?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBackup,
   onOpenGitHub,
   onOpenInstallPWA,
+  currentAppUser,
+  onLogoutApp,
 }) => {
   const { currentUser, signInWithGoogle, logout, isFirestoreConnected } = useAuth();
 
@@ -156,6 +160,26 @@ export const Header: React.FC<HeaderProps> = ({
                 <LogIn className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Salvar na Nuvem (Google)</span>
               </button>
+            )}
+
+            {/* System App User Badge & Logout */}
+            {currentAppUser && (
+              <div className="flex items-center gap-1.5 bg-[#0B192C] text-white border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs shadow-2xs">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="font-mono font-bold text-amber-300 truncate max-w-[100px] sm:max-w-none">
+                  {currentAppUser}
+                </span>
+                {onLogoutApp && (
+                  <button
+                    type="button"
+                    onClick={onLogoutApp}
+                    title="Sair do sistema (Bloquear tela)"
+                    className="p-1 ml-0.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Actions: Instalar PWA, GitHub, Backup and Desktop "+ Nova Despesa" */}
