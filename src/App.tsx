@@ -18,6 +18,8 @@ import { ExpenseDetailModal } from './components/ExpenseDetailModal.tsx';
 import { ExpenseFormModal } from './components/ExpenseFormModal.tsx';
 import { PersonManagerModal } from './components/PersonManagerModal.tsx';
 import { BackupModal } from './components/BackupModal.tsx';
+import { GitHubModal } from './components/GitHubModal.tsx';
+import { PWAInstallModal } from './components/PWAInstallModal.tsx';
 import { AuthProvider, useAuth } from './firebase/AuthContext.tsx';
 import {
   subscribeUserPeople,
@@ -45,6 +47,8 @@ function MainApp() {
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isPersonManagerOpen, setIsPersonManagerOpen] = useState(false);
   const [isBackupOpen, setIsBackupOpen] = useState(false);
+  const [isGitHubOpen, setIsGitHubOpen] = useState(false);
+  const [isPWAInstallOpen, setIsPWAInstallOpen] = useState(false);
 
   const initialSyncDone = useRef(false);
 
@@ -444,6 +448,8 @@ function MainApp() {
         onOpenNewExpense={handleOpenNewExpense}
         onOpenPersonManager={() => setIsPersonManagerOpen(true)}
         onOpenBackup={() => setIsBackupOpen(true)}
+        onOpenGitHub={() => setIsGitHubOpen(true)}
+        onOpenInstallPWA={() => setIsPWAInstallOpen(true)}
       />
 
       {/* Floating Save Success Toast */}
@@ -611,6 +617,20 @@ function MainApp() {
           setExpenses(loadExpenses());
         }}
         onResetToSeed={handleResetToSeed}
+        onOpenGitHub={() => setIsGitHubOpen(true)}
+        onOpenInstallPWA={() => setIsPWAInstallOpen(true)}
+      />
+
+      {/* GitHub Public Export & Save Modal */}
+      <GitHubModal
+        isOpen={isGitHubOpen}
+        onClose={() => setIsGitHubOpen(false)}
+      />
+
+      {/* PWA Android Install Modal */}
+      <PWAInstallModal
+        isOpen={isPWAInstallOpen}
+        onClose={() => setIsPWAInstallOpen(false)}
       />
     </div>
   );

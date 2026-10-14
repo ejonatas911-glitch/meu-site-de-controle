@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { exportAllDataJSON, importAllDataJSON } from '../utils/storage.ts';
-import { X, Download, Upload, Copy, Check, ShieldCheck, RefreshCw } from 'lucide-react';
+import { X, Download, Upload, Copy, Check, ShieldCheck, RefreshCw, FolderGit2, Smartphone } from 'lucide-react';
 
 interface BackupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDataRestored: () => void;
   onResetToSeed: () => void;
+  onOpenGitHub?: () => void;
+  onOpenInstallPWA?: () => void;
 }
 
 export const BackupModal: React.FC<BackupModalProps> = ({
@@ -14,6 +16,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   onClose,
   onDataRestored,
   onResetToSeed,
+  onOpenGitHub,
+  onOpenInstallPWA,
 }) => {
   const [copied, setCopied] = useState(false);
   const [importText, setImportText] = useState('');
@@ -191,6 +195,68 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* PWA Install Section */}
+          {onOpenInstallPWA && (
+            <div className="bg-gradient-to-r from-[#0B192C] via-[#10243E] to-[#1E3E62] text-white p-4 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-md ring-1 ring-amber-400/40 bg-[#0B192C] flex items-center justify-center">
+                  <img
+                    src="/icons/icon-192x192.png"
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-0.5 flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5" />
+                    Instalar Aplicativo (PWA Android)
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    Fixe na tela inicial como app nativo do celular, rápido e offline.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInstallPWA();
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-bold rounded-xl transition-all shrink-0 shadow-sm ml-2"
+              >
+                Instalar App
+              </button>
+            </div>
+          )}
+
+          {/* GitHub Export Section */}
+          {onOpenGitHub && (
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-0.5 flex items-center gap-1.5">
+                  <FolderGit2 className="w-4 h-4" />
+                  Salvar Público no GitHub
+                </h4>
+                <p className="text-[11px] text-slate-300">
+                  Publique o código-fonte ou baixe em .ZIP para seu perfil no GitHub.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenGitHub();
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-colors shrink-0 shadow-xs"
+              >
+                Abrir GitHub
+              </button>
+            </div>
+          )}
 
           {/* Seed Reset */}
           <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
