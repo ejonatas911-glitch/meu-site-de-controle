@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExpenseItem, Person } from '../types/index.ts';
+import { ExpenseItem, Person, Installment } from '../types/index.ts';
 import { calculateExpenseSummary } from '../utils/calculations.ts';
 import { formatCurrency, formatDate, getFrequencyShort, getTypeLabel } from '../utils/formatters.ts';
 import {
@@ -15,6 +15,9 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Coins,
+  Banknote,
+  Edit3,
 } from 'lucide-react';
 
 interface ExpenseListProps {
@@ -25,6 +28,7 @@ interface ExpenseListProps {
   onDeleteExpense: (expenseId: string) => void;
   onPayNextInstallment: (expenseId: string) => void;
   onToggleInstallment: (expenseId: string, installmentNumber: number) => void;
+  onOpenCustomPayment?: (expense: ExpenseItem, installment: Installment) => void;
   onOpenNewExpense: () => void;
 }
 
@@ -36,6 +40,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   onDeleteExpense,
   onPayNextInstallment,
   onToggleInstallment,
+  onOpenCustomPayment,
   onOpenNewExpense,
 }) => {
   // Store expanded grid state for each expense card (default true so user sees 1 to 24 right away)
@@ -222,49 +227,60 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                       <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </button>
-                  <span className="text-[11px] text-slate-400">
-                    Toque para pagar / desmarcar
+                  <span className="text-[11px] text-emerald-800 font-medium">
+                    Toque para pagar ou colocar o valor que quiser
                   </span>
                 </div>
 
                 {isGridExpanded && (
                   <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-1.5 p-2 bg-slate-50/70 rounded-xl border border-slate-200/80 w-full">
-                    {expense.installments.map((inst) => (
-                      <button
-                        key={inst.number}
-                        type="button"
-                        onClick={() => onToggleInstallment(expense.id, inst.number)}
-                        title={`Parcela ${inst.number}: ${formatCurrency(inst.amount)} - ${
-                          inst.isPaid ? 'Paga (Clique para desmarcar)' : 'Pendente (Clique para pagar)'
-                        }`}
-                        className={`min-h-[46px] p-1.5 rounded-lg border text-center transition-all flex flex-col items-center justify-center cursor-pointer select-none ${
-                          inst.isPaid
-                            ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                            : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1">
-                          {inst.isPaid && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          <span className="text-xs font-bold leading-none">
-                            #{inst.number}
+                    {expense.installments.map((inst) => {
+                      const displayAmount =
+                        inst.isPaid && typeof inst.paidAmount === 'number'
+                          ? inst.paidAmount
+                          : inst.amount;
+
+                      return (
+                        <button
+                          key={inst.number}
+                          type="button"
+                          onClick={() => {
+                            if (onOpenCustomPayment) {
+                              onOpenCustomPayment(expense, inst);
+                            } else {
+                              onToggleInstallment(expense.id, inst.number);
+                            }
+                          }}
+                          title={`Parcela ${inst.number}: ${formatCurrency(displayAmount)} - Toque para pagar ou colocar o valor que você quiser`}
+                          className={`min-h-[48px] p-1.5 rounded-lg border text-center transition-all flex flex-col items-center justify-center cursor-pointer select-none group relative ${
+                            inst.isPaid
+                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                              : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-800 hover:bg-emerald-50/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            {inst.isPaid && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            <span className="text-xs font-bold leading-none">
+                              #{inst.number}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-[10px] font-mono tabular-nums leading-tight mt-0.5 ${
+                              inst.isPaid ? 'text-emerald-100 font-semibold' : 'text-slate-700 font-medium'
+                            }`}
+                          >
+                            {formatCurrency(displayAmount)}
                           </span>
-                        </div>
-                        <span
-                          className={`text-[10px] font-mono tabular-nums leading-tight mt-0.5 ${
-                            inst.isPaid ? 'text-emerald-100 font-semibold' : 'text-slate-700 font-medium'
-                          }`}
-                        >
-                          {formatCurrency(inst.amount)}
-                        </span>
-                        <span
-                          className={`text-[9px] leading-tight mt-0.5 ${
-                            inst.isPaid ? 'text-emerald-200' : 'text-slate-400'
-                          }`}
-                        >
-                          {inst.dueDate ? inst.dueDate.split('-').slice(1).reverse().join('/') : ''}
-                        </span>
-                      </button>
-                    ))}
+                          <span
+                            className={`text-[9px] leading-tight mt-0.5 ${
+                              inst.isPaid ? 'text-emerald-200' : 'text-slate-400'
+                            }`}
+                          >
+                            {inst.dueDate ? inst.dueDate.split('-').slice(1).reverse().join('/') : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -293,7 +309,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
             </div>
 
             {/* Bottom Action Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => onSelectExpense(expense)}
@@ -304,15 +320,35 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
               </button>
 
               {!isCompleted && nextUnpaidInstallment && (
-                <button
-                  type="button"
-                  onClick={() => onPayNextInstallment(expense.id)}
-                  title={`Marcar parcela ${nextUnpaidInstallment.number} (${formatCurrency(nextUnpaidInstallment.amount)}) como paga`}
-                  className="min-h-[44px] px-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Pagar #{nextUnpaidInstallment.number} ({formatCurrency(nextUnpaidInstallment.amount)})</span>
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onOpenCustomPayment && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenCustomPayment(expense, nextUnpaidInstallment)}
+                      title={`Digitar o valor que você quiser para a parcela #${nextUnpaidInstallment.number}`}
+                      className="min-h-[44px] px-3 bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Coins className="w-4 h-4" />
+                      <span>Outro Valor</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenCustomPayment) {
+                        onOpenCustomPayment(expense, nextUnpaidInstallment);
+                      } else {
+                        onPayNextInstallment(expense.id);
+                      }
+                    }}
+                    title={`Pagar parcela ${nextUnpaidInstallment.number} (${formatCurrency(nextUnpaidInstallment.amount)})`}
+                    className="min-h-[44px] px-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Pagar #{nextUnpaidInstallment.number} ({formatCurrency(nextUnpaidInstallment.amount)})</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>

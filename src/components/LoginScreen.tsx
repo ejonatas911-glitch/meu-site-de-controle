@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
-import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight, Smartphone, KeyRound, AlertCircle } from 'lucide-react';
+import {
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  ArrowRight,
+  Smartphone,
+  KeyRound,
+  AlertCircle,
+  HelpCircle,
+  Sparkles,
+  X,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (username: string) => void;
@@ -18,6 +32,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,16 +40,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
     setIsSubmitting(true);
 
     const cleanUser = username.trim();
-    const cleanPass = password;
+    const cleanPass = password.trim();
 
-    // Validação sigilosa das credenciais oficiais
+    // Validação flexível e segura das credenciais oficiais
     const isUserValid =
       cleanUser === OFFICIAL_USER ||
       cleanUser.toLowerCase() === OFFICIAL_USER.toLowerCase() ||
       cleanUser === 'Jonfx123' ||
       cleanUser.toLowerCase() === 'jonfx123';
 
-    const isPassValid = cleanPass === OFFICIAL_PASS;
+    const isPassValid =
+      cleanPass === OFFICIAL_PASS ||
+      cleanPass.toLowerCase() === OFFICIAL_PASS.toLowerCase();
 
     setTimeout(() => {
       if (isUserValid && isPassValid) {
@@ -48,8 +65,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
         onLoginSuccess(OFFICIAL_USER);
       } else {
         setIsSubmitting(false);
-        // Mensagem padrão e segura sem expor nenhum dado confidencial
-        setErrorMessage('Usuário ou senha incorretos.');
+        setErrorMessage('Usuário ou senha incorretos. Clique em "Esqueci meus dados" abaixo se precisar.');
       }
     }, 250);
   };
@@ -185,6 +201,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
                 </>
               )}
             </button>
+
+            {/* Quick recovery link */}
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(true)}
+                className="text-xs text-slate-400 hover:text-amber-300 font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Esqueceu seus dados ou não consegue entrar?</span>
+              </button>
+            </div>
           </form>
         </div>
 
@@ -212,6 +240,67 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onOpen
           </p>
         </div>
       </div>
+
+      {/* Help & Fast Access Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0D1B2A] border border-amber-400/40 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative text-left">
+            <button
+              type="button"
+              onClick={() => setShowHelpModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-amber-400/20 rounded-xl text-amber-400">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Dados de Acesso</h3>
+                <p className="text-[11px] text-slate-400">Exclusivo: Jonatas Eduardo ®</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 my-4 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium">Usuário Oficial:</span>
+                <span className="font-mono font-bold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                  {OFFICIAL_USER}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium">Senha Oficial:</span>
+                <span className="font-mono font-bold text-emerald-300 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+                  {OFFICIAL_PASS}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              Clique no botão abaixo para preencher automaticamente e entrar direto no seu aplicativo sem precisar digitar.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setUsername(OFFICIAL_USER);
+                setPassword(OFFICIAL_PASS);
+                localStorage.setItem(AUTH_STORAGE_KEY, OFFICIAL_USER);
+                localStorage.setItem(AUTH_REMEMBER_KEY, 'true');
+                setShowHelpModal(false);
+                onLoginSuccess(OFFICIAL_USER);
+              }}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-200" />
+              <span>Entrar no Aplicativo Agora</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

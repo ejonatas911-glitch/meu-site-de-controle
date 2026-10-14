@@ -14,6 +14,7 @@ export interface Installment {
   amount: number;
   isPaid: boolean;
   paidAt?: string | null;
+  paidAmount?: number | null; // Valor efetivamente pago pelo usuário (permite colocar o valor que quiser)
   notes?: string;
 }
 

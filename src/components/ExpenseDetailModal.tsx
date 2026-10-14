@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExpenseItem, Person } from '../types/index.ts';
+import { ExpenseItem, Person, Installment } from '../types/index.ts';
 import { calculateExpenseSummary } from '../utils/calculations.ts';
 import {
   formatCurrency,
@@ -20,6 +20,8 @@ import {
   List,
   ShieldCheck,
   Edit3,
+  Coins,
+  Banknote,
 } from 'lucide-react';
 
 interface ExpenseDetailModalProps {
@@ -33,6 +35,7 @@ interface ExpenseDetailModalProps {
   onPayNext: (expenseId: string) => void;
   onEdit: (expense: ExpenseItem) => void;
   onUpdateExpense?: (expense: ExpenseItem) => void;
+  onOpenCustomPayment?: (expense: ExpenseItem, installment: Installment) => void;
 }
 
 export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
@@ -46,6 +49,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   onPayNext,
   onEdit,
   onUpdateExpense,
+  onOpenCustomPayment,
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'unpaid' | 'paid'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); // Default to grid for 1 to 24 clarity
@@ -333,15 +337,29 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             </div>
 
             {!isCompleted && nextUnpaid && (
-              <button
-                type="button"
-                onClick={() => onPayNext(expense.id)}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 shadow-xs transition-colors"
-                title={`Pagar parcela ${nextUnpaid.number}`}
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Pagar Próxima (#{nextUnpaid.number})</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onOpenCustomPayment && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenCustomPayment(expense, nextUnpaid)}
+                    className="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-bold rounded-lg flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                    title={`Pagar outro valor na parcela #${nextUnpaid.number} (coloque a quantia que você quiser)`}
+                  >
+                    <Coins className="w-3.5 h-3.5" />
+                    <span>Outro Valor (#{nextUnpaid.number})</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => onPayNext(expense.id)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                  title={`Pagar parcela ${nextUnpaid.number}`}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Pagar Próxima (#{nextUnpaid.number})</span>
+                </button>
+              </div>
             )}
 
             {summary.paidInstallmentsCount > 0 && (
@@ -378,6 +396,16 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Informative helper banner for custom installment amount */}
+        <div className="px-4 sm:px-6 py-2 bg-amber-50/80 border-b border-amber-200/60 text-xs text-amber-950 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Coins className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Valor livre:</strong> Não pode pagar o valor padrão? Toque em qualquer parcela para pagar R$ 10, R$ 20, R$ 50 ou a quantia que quiser!
+            </span>
+          </div>
+        </div>
+
         {/* Installment Content (Grid or List) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {filteredInstallments.length === 0 ? (
@@ -389,18 +417,29 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
               {filteredInstallments.map((inst) => {
                 const isNext = !inst.isPaid && nextUnpaid?.number === inst.number;
+                const displayAmt =
+                  inst.isPaid && typeof inst.paidAmount === 'number'
+                    ? inst.paidAmount
+                    : inst.amount;
 
                 return (
                   <button
                     key={inst.number}
                     type="button"
-                    onClick={() => onToggleInstallment(expense.id, inst.number)}
-                    className={`min-h-[64px] p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-between cursor-pointer select-none ${
+                    onClick={() => {
+                      if (onOpenCustomPayment) {
+                        onOpenCustomPayment(expense, inst);
+                      } else {
+                        onToggleInstallment(expense.id, inst.number);
+                      }
+                    }}
+                    title={`Parcela ${inst.number}: ${formatCurrency(displayAmt)} - Toque para pagar ou colocar o valor que você quiser`}
+                    className={`min-h-[68px] p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-between cursor-pointer select-none group relative ${
                       inst.isPaid
                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
                         : isNext
                         ? 'bg-amber-50 border-amber-300 text-slate-900 ring-2 ring-amber-400/30'
-                        : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-900 hover:bg-slate-50'
+                        : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-900 hover:bg-emerald-50/40'
                     }`}
                   >
                     <div className="flex items-center gap-1">
@@ -420,7 +459,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                           inst.isPaid ? 'text-emerald-100' : 'text-slate-900'
                         }`}
                       >
-                        {formatCurrency(inst.amount)}
+                        {formatCurrency(displayAmt)}
                       </span>
                       <span
                         className={`text-[10px] block leading-tight ${
@@ -443,7 +482,13 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 return (
                   <div
                     key={inst.number}
-                    onClick={() => onToggleInstallment(expense.id, inst.number)}
+                    onClick={() => {
+                      if (onOpenCustomPayment) {
+                        onOpenCustomPayment(expense, inst);
+                      } else {
+                        onToggleInstallment(expense.id, inst.number);
+                      }
+                    }}
                     className={`py-3 px-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer select-none transition-colors ${
                       inst.isPaid
                         ? 'bg-emerald-50/50 hover:bg-emerald-50/80 text-slate-900'
@@ -483,7 +528,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-slate-400" />
+                            <Calendar className="w-3 text-slate-400" />
                             Vencimento: {formatDate(inst.dueDate)}
                           </span>
                           {inst.isPaid && inst.paidAt && (
@@ -491,6 +536,11 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                               <span className="text-slate-300">·</span>
                               <span className="text-emerald-700 font-medium">
                                 Paga em: {formatDate(inst.paidAt)}
+                                {typeof inst.paidAmount === 'number' && inst.paidAmount !== inst.amount && (
+                                  <span className="ml-1 text-emerald-800 font-bold">
+                                    (Pago: {formatCurrency(inst.paidAmount)})
+                                  </span>
+                                )}
                               </span>
                             </>
                           )}
@@ -532,22 +582,35 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                         </div>
                       ) : (
                         <div className="flex items-center justify-end gap-1.5">
-                          <span className="text-sm font-bold text-slate-900 font-mono tabular-nums block">
-                            {formatCurrency(inst.amount)}
-                          </span>
-                          {onUpdateExpense && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                          <div>
+                            <span className="text-sm font-bold text-slate-900 font-mono tabular-nums block">
+                              {formatCurrency(
+                                inst.isPaid && typeof inst.paidAmount === 'number'
+                                  ? inst.paidAmount
+                                  : inst.amount
+                              )}
+                            </span>
+                            {inst.isPaid && typeof inst.paidAmount === 'number' && inst.paidAmount !== inst.amount && (
+                              <span className="text-[10px] text-slate-400 line-through block font-mono">
+                                Prev: {formatCurrency(inst.amount)}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenCustomPayment) {
+                                onOpenCustomPayment(expense, inst);
+                              } else {
                                 handleStartEditInstallment(inst.number, inst.amount);
-                              }}
-                              className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors"
-                              title="Alterar o valor desta parcela para a quantia que quiser"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                              }
+                            }}
+                            className="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                            title="Colocar o valor que você quiser nesta parcela"
+                          >
+                            <Coins className="w-4 h-4" />
+                          </button>
                         </div>
                       )}
 

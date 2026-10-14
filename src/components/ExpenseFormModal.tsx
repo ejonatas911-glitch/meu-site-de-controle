@@ -522,6 +522,14 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Explanatory note about custom values */}
+            <div className="mt-3 pt-2.5 border-t border-slate-200/80 flex items-start gap-2 text-[11px] text-emerald-950 bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/80">
+              <span className="font-bold text-emerald-700 shrink-0">💡 Liberdade total:</span>
+              <span>
+                Você pode colocar <strong>o valor que quiser</strong> por parcela. E mesmo que defina R$ 34,00 agora, na hora de pagar cada parcela você pode pagar <strong>qualquer outro valor</strong> (ex: R$ 10, R$ 20, R$ 50, etc.).
+              </span>
+            </div>
           </div>
 
           {/* Quantidade Total de Parcelas & Frequência */}

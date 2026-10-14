@@ -76,21 +76,28 @@ export function generateInstallments(
 }
 
 /**
- * Calculates item summary strictly from registered values
+ * Calculates item summary strictly from registered values and actual paid amounts
  */
 export function calculateExpenseSummary(item: ExpenseItem): ExpenseSummary {
-  const totalInstallments = item.totalInstallments || item.installments.length;
+  const totalInstallments = item.totalInstallments || item.installments?.length || 0;
   const installmentAmount = item.installmentAmount;
   
-  // Total previsto das parcelas (ex: 24 * 25,00 = 600,00)
-  const totalScheduled = totalInstallments * installmentAmount;
+  // Total previsto das parcelas (soma real de cada parcela cadastrada)
+  const totalScheduled = item.installments && item.installments.length > 0
+    ? item.installments.reduce((sum, inst) => sum + (typeof inst.amount === 'number' ? inst.amount : installmentAmount), 0)
+    : totalInstallments * installmentAmount;
   
-  const paidList = item.installments.filter((inst) => inst.isPaid);
+  const paidList = item.installments ? item.installments.filter((inst) => inst.isPaid) : [];
   const paidInstallmentsCount = paidList.length;
   const remainingInstallmentsCount = Math.max(0, totalInstallments - paidInstallmentsCount);
 
-  // Total pago somando as parcelas pagas
-  const totalPaid = paidList.reduce((sum, inst) => sum + (inst.amount || installmentAmount), 0);
+  // Total pago somando o valor real pago de cada parcela (permite o usuário colocar o valor que quiser)
+  const totalPaid = paidList.reduce((sum, inst) => {
+    const actualPaid = typeof inst.paidAmount === 'number' && !isNaN(inst.paidAmount)
+      ? inst.paidAmount
+      : (typeof inst.amount === 'number' ? inst.amount : installmentAmount);
+    return sum + actualPaid;
+  }, 0);
   
   // Saldo restante das parcelas
   const remainingBalance = Math.max(0, totalScheduled - totalPaid);
@@ -111,7 +118,7 @@ export function calculateExpenseSummary(item: ExpenseItem): ExpenseSummary {
 }
 
 /**
- * Updates installments when editing an existing expense while preserving or updating paid status
+ * Updates installments when editing an existing expense while preserving custom amounts and paid status
  */
 export function syncInstallmentsOnEdit(
   existingInstallments: Installment[],
@@ -131,18 +138,28 @@ export function syncInstallmentsOnEdit(
 
     let isPaid = prev ? prev.isPaid : false;
     let paidAt = prev ? prev.paidAt : null;
+    let paidAmount = prev ? prev.paidAmount : null;
 
     if (explicitPaidNumbers !== undefined) {
       isPaid = explicitPaidNumbers.includes(num);
       paidAt = isPaid ? (prev?.paidAt || today) : null;
+      if (!isPaid) {
+        paidAmount = null;
+      }
     }
+
+    // Preserve custom amount if previous installment had a custom value
+    const amount = prev && typeof prev.amount === 'number' && prev.amount > 0
+      ? prev.amount
+      : newInstallmentAmount;
 
     result.push({
       number: num,
       dueDate,
-      amount: newInstallmentAmount,
+      amount,
       isPaid,
       paidAt,
+      paidAmount,
       notes: prev?.notes,
     });
   }

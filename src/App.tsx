@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Person, ExpenseItem } from './types/index.ts';
+import { Person, ExpenseItem, Installment } from './types/index.ts';
 import {
   loadPeople,
   savePeople,
@@ -10,12 +10,13 @@ import {
   DEFAULT_PERSON,
 } from './utils/storage.ts';
 import { calculateExpenseSummary, generateInstallments } from './utils/calculations.ts';
-import { toDateInputValue } from './utils/formatters.ts';
+import { toDateInputValue, formatCurrency } from './utils/formatters.ts';
 import { Header } from './components/Header.tsx';
 import { SummaryCards } from './components/SummaryCards.tsx';
 import { ExpenseList } from './components/ExpenseList.tsx';
 import { ExpenseDetailModal } from './components/ExpenseDetailModal.tsx';
 import { ExpenseFormModal } from './components/ExpenseFormModal.tsx';
+import { CustomPaymentModal } from './components/CustomPaymentModal.tsx';
 import { PersonManagerModal } from './components/PersonManagerModal.tsx';
 import { BackupModal } from './components/BackupModal.tsx';
 import { GitHubModal } from './components/GitHubModal.tsx';
@@ -50,6 +51,12 @@ function MainApp() {
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isGitHubOpen, setIsGitHubOpen] = useState(false);
   const [isPWAInstallOpen, setIsPWAInstallOpen] = useState(false);
+
+  // Custom Payment Modal State (Permite colocar o valor que quiser na parcela)
+  const [customPaymentData, setCustomPaymentData] = useState<{
+    expense: ExpenseItem;
+    installment: Installment;
+  } | null>(null);
 
   // App Login Area (Usuário: Jonfx123@ / Senha: Jonfx123)
   const [appUser, setAppUser] = useState<string | null>(() => {
@@ -380,6 +387,127 @@ function MainApp() {
     }
   };
 
+  // Open Custom Payment Modal for any installment (permite colocar o valor que quiser)
+  const handleOpenCustomPayment = (expense: ExpenseItem, installment: Installment) => {
+    const currentExp = expenses.find((e) => e.id === expense.id) || expense;
+    const currentInst = currentExp.installments.find((i) => i.number === installment.number) || installment;
+    setCustomPaymentData({ expense: currentExp, installment: currentInst });
+  };
+
+  const handleConfirmCustomPayment = (
+    installmentNumber: number,
+    amountToPay: number,
+    notes?: string,
+    updateScheduledAmount: boolean = true
+  ) => {
+    if (!customPaymentData) return;
+    const expenseId = customPaymentData.expense.id;
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
+    const now = toDateInputValue(new Date());
+    const updatedInstallments = item.installments.map((inst) => {
+      if (inst.number !== installmentNumber) return inst;
+      return {
+        ...inst,
+        isPaid: true,
+        paidAt: now,
+        paidAmount: amountToPay,
+        amount: updateScheduledAmount ? amountToPay : inst.amount,
+        notes: notes !== undefined && notes !== '' ? notes : inst.notes,
+      };
+    });
+
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: updatedInstallments,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
+
+    if (currentUser) {
+      saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
+        console.error('Erro ao salvar pagamento personalizado no Firestore:', err)
+      );
+    }
+
+    setToastMessage(`✓ Parcela #${installmentNumber} paga com sucesso no valor de ${formatCurrency(amountToPay)}!`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  const handleUnmarkCustomPayment = (installmentNumber: number) => {
+    if (!customPaymentData) return;
+    const expenseId = customPaymentData.expense.id;
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
+    const updatedInstallments = item.installments.map((inst) => {
+      if (inst.number !== installmentNumber) return inst;
+      return {
+        ...inst,
+        isPaid: false,
+        paidAt: null,
+        paidAmount: null,
+      };
+    });
+
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: updatedInstallments,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
+
+    if (currentUser) {
+      saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
+        console.error('Erro ao desmarcar parcela no Firestore:', err)
+      );
+    }
+
+    setToastMessage(`Parcela #${installmentNumber} marcada como pendente.`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
+  const handleUpdateAmountOnly = (installmentNumber: number, newAmount: number) => {
+    if (!customPaymentData) return;
+    const expenseId = customPaymentData.expense.id;
+    const item = expenses.find((e) => e.id === expenseId);
+    if (!item) return;
+
+    const updatedInstallments = item.installments.map((inst) => {
+      if (inst.number !== installmentNumber) return inst;
+      return {
+        ...inst,
+        amount: newAmount,
+      };
+    });
+
+    const updatedItem: ExpenseItem = {
+      ...item,
+      installments: updatedInstallments,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setExpenses((prev) => prev.map((e) => (e.id === expenseId ? updatedItem : e)));
+
+    if (currentUser) {
+      saveExpenseToFirestore(currentUser.uid, updatedItem).catch((err) =>
+        console.error('Erro ao atualizar valor da parcela no Firestore:', err)
+      );
+    }
+
+    setToastMessage(`✓ Valor da parcela #${installmentNumber} alterado para ${formatCurrency(newAmount)}!`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
   // Open Form
   const handleOpenNewExpense = () => {
     setEditingExpense(null);
@@ -599,6 +727,7 @@ function MainApp() {
             onDeleteExpense={handleDeleteExpense}
             onPayNextInstallment={handlePayNextInstallment}
             onToggleInstallment={handleToggleInstallment}
+            onOpenCustomPayment={handleOpenCustomPayment}
             onOpenNewExpense={handleOpenNewExpense}
           />
         </section>
@@ -628,11 +757,26 @@ function MainApp() {
           onMarkAllPaid={handleMarkAllPaid}
           onUnmarkAll={handleUnmarkAll}
           onPayNext={handlePayNextInstallment}
+          onOpenCustomPayment={handleOpenCustomPayment}
           onEdit={(item) => {
             setSelectedExpenseId(null);
             handleEditExpense(item);
           }}
           onUpdateExpense={handleSaveExpense}
+        />
+      )}
+
+      {/* Custom Payment Modal (Colocar o valor que quiser na parcela) */}
+      {customPaymentData && (
+        <CustomPaymentModal
+          isOpen={!!customPaymentData}
+          onClose={() => setCustomPaymentData(null)}
+          expenseTitle={customPaymentData.expense.title}
+          installment={customPaymentData.installment}
+          defaultInstallmentAmount={customPaymentData.expense.installmentAmount}
+          onConfirmPayment={handleConfirmCustomPayment}
+          onUnmarkPayment={handleUnmarkCustomPayment}
+          onUpdateAmountOnly={handleUpdateAmountOnly}
         />
       )}
 
