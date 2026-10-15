@@ -27,6 +27,19 @@ export function formatDate(dateString: string | null | undefined): string {
   }
 }
 
+export function formatShortDate(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  try {
+    const parts = dateString.split('-');
+    if (parts.length >= 3) {
+      return `${parts[2]}/${parts[1]}`;
+    }
+    return dateString;
+  } catch {
+    return dateString || '';
+  }
+}
+
 export function toDateInputValue(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

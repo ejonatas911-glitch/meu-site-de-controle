@@ -5,6 +5,7 @@ import { InstallmentsRoll } from './InstallmentsRoll.tsx';
 import {
   formatCurrency,
   formatDate,
+  formatShortDate,
   getFrequencyLabel,
   getTypeLabel,
 } from '../utils/formatters.ts';
@@ -54,7 +55,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   onOpenCustomPayment,
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'unpaid' | 'paid'>('all');
-  const [viewMode, setViewMode] = useState<'roll' | 'list'>('roll'); // Default to roll (1 ao 50) as requested by user
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Default to grid matching screenshot
   const [selectedUpTo, setSelectedUpTo] = useState<number>(5);
   const [editingInstallmentNum, setEditingInstallmentNum] = useState<number | null>(null);
   const [editingInstallmentVal, setEditingInstallmentVal] = useState<string>('');
@@ -316,20 +317,20 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
           {/* View mode toggle + Fast Actions */}
           <div className="flex items-center gap-1.5">
-            {/* View Mode (Rolagem vs Lista) */}
+            {/* View Mode (Grade vs Lista) */}
             <div className="inline-flex p-1 bg-slate-100 rounded-lg text-xs items-center gap-1">
               <button
                 type="button"
-                onClick={() => setViewMode('roll')}
+                onClick={() => setViewMode('grid')}
                 className={`px-2.5 py-1 rounded-md transition-colors font-bold flex items-center gap-1 cursor-pointer ${
-                  viewMode === 'roll'
+                  viewMode === 'grid'
                     ? 'bg-white text-emerald-800 shadow-2xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
-                title={`Visualização em Rolagem de 1 a ${expense.totalInstallments}`}
+                title={`Visualização em Grade 1 a ${expense.totalInstallments}`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Rolagem 1 ao {expense.totalInstallments}</span>
+                <LayoutGrid className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Grade 1 ao {expense.totalInstallments}</span>
               </button>
               <button
                 type="button"
@@ -422,19 +423,63 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             <div className="py-12 text-center text-slate-400 text-sm">
               Nenhuma parcela para a visualização selecionada.
             </div>
-          ) : viewMode === 'roll' ? (
-            /* Rolagem Interativa de Parcelas 1 ao 50 (substitui os quadradinhos) */
-            <div className="space-y-4">
-              <InstallmentsRoll
-                installments={filteredInstallments}
-                onPayOrOpenCustom={(inst) => {
-                  if (onOpenCustomPayment) {
-                    onOpenCustomPayment(expense, inst);
-                  } else {
-                    onToggleInstallment(expense.id, inst.number);
-                  }
-                }}
-              />
+          ) : viewMode === 'grid' ? (
+            /* Visual em Grade 1 ao N - idêntico ao print do usuário */
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2.5">
+              {filteredInstallments.map((inst) => {
+                const isNext = !inst.isPaid && nextUnpaid?.number === inst.number;
+                const displayAmt =
+                  inst.isPaid && typeof inst.paidAmount === 'number'
+                    ? inst.paidAmount
+                    : inst.amount;
+
+                return (
+                  <button
+                    key={inst.number}
+                    type="button"
+                    onClick={() => onToggleInstallment(expense.id, inst.number)}
+                    title={`Parcela ${inst.number}: ${formatCurrency(displayAmt)} - Toque para marcar/desmarcar`}
+                    className={`min-h-[64px] p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 group relative ${
+                      inst.isPaid
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
+                        : isNext
+                        ? 'bg-white border-2 border-emerald-500 text-slate-900 shadow-xs ring-1 ring-emerald-500/30'
+                        : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-800 hover:bg-emerald-50/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {inst.isPaid ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
+                          <span className="text-xs font-bold leading-none">
+                            #{inst.number}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs font-bold leading-none text-slate-800">
+                          #{inst.number}
+                        </span>
+                      )}
+                    </div>
+
+                    <span
+                      className={`text-[11px] font-mono tabular-nums leading-tight mt-1 ${
+                        inst.isPaid ? 'text-white font-bold' : 'text-slate-800 font-semibold'
+                      }`}
+                    >
+                      {formatCurrency(displayAmt)}
+                    </span>
+
+                    <span
+                      className={`text-[10px] leading-tight mt-0.5 ${
+                        inst.isPaid ? 'text-emerald-100 font-medium' : 'text-slate-400'
+                      }`}
+                    >
+                      {formatShortDate(inst.dueDate)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             /* Detailed Row List */

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ExpenseItem, Person, Installment } from '../types/index.ts';
 import { calculateExpenseSummary } from '../utils/calculations.ts';
-import { formatCurrency, formatDate, getFrequencyShort, getTypeLabel } from '../utils/formatters.ts';
+import { formatCurrency, formatDate, formatShortDate, getFrequencyShort, getTypeLabel } from '../utils/formatters.ts';
 import { InstallmentsRoll } from './InstallmentsRoll.tsx';
 import {
   Calendar,
@@ -44,6 +44,16 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   onOpenCustomPayment,
   onOpenNewExpense,
 }) => {
+  // Store expanded grid state for each expense card (default true so user sees 1 to 24 right away)
+  const [expandedGrids, setExpandedGrids] = useState<{ [expenseId: string]: boolean }>({});
+
+  const toggleGrid = (expenseId: string) => {
+    setExpandedGrids((prev) => ({
+      ...prev,
+      [expenseId]: prev[expenseId] === undefined ? false : !prev[expenseId],
+    }));
+  };
+
   const getPersonName = (personId: string) => {
     const p = people.find((item) => item.id === personId);
     return p ? p.name : 'Jonatas Eduardo';
@@ -80,6 +90,8 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         const personName = getPersonName(expense.personId);
         const isCompleted = summary.remainingInstallmentsCount === 0;
         const nextUnpaidInstallment = expense.installments.find((i) => !i.isPaid);
+        // Default is expanded so user immediately sees installments 1 to 24 like in screenshot
+        const isGridExpanded = expandedGrids[expense.id] !== false;
 
         return (
           <div
@@ -201,18 +213,84 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                 </div>
               </div>
 
-              {/* Rolagem Interativa de Parcelas de 1 a N / 1 ao 50 (substitui os quadradinhos) */}
+              {/* Parcelas de 1 a N (com valor) - Visual Idêntico ao Print do Usuário */}
               <div className="mt-4 pt-3 border-t border-slate-100">
-                <InstallmentsRoll
-                  installments={expense.installments}
-                  onPayOrOpenCustom={(inst) => {
-                    if (onOpenCustomPayment) {
-                      onOpenCustomPayment(expense, inst);
-                    } else {
-                      onToggleInstallment(expense.id, inst.number);
-                    }
-                  }}
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleGrid(expense.id)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-emerald-700 transition-colors cursor-pointer select-none"
+                  >
+                    <span>Parcelas de 1 a {expense.totalInstallments} (com valor)</span>
+                    {isGridExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Toque para pagar / desmarcar
+                  </span>
+                </div>
+
+                {isGridExpanded && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2 p-2 bg-slate-50/70 rounded-2xl border border-slate-200/80 w-full">
+                    {expense.installments.map((inst) => {
+                      const isNext = !inst.isPaid && nextUnpaidInstallment?.number === inst.number;
+                      const displayAmount =
+                        inst.isPaid && typeof inst.paidAmount === 'number'
+                          ? inst.paidAmount
+                          : inst.amount;
+
+                      return (
+                        <button
+                          key={inst.number}
+                          type="button"
+                          onClick={() => onToggleInstallment(expense.id, inst.number)}
+                          title={`Parcela ${inst.number}: ${formatCurrency(displayAmount)} - Toque para ${inst.isPaid ? 'desmarcar' : 'marcar como paga'}`}
+                          className={`min-h-[58px] p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 group relative ${
+                            inst.isPaid
+                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
+                              : isNext
+                              ? 'bg-white border-2 border-emerald-500 text-slate-900 shadow-xs ring-1 ring-emerald-500/30'
+                              : 'bg-white border-slate-200 hover:border-emerald-400 text-slate-800 hover:bg-emerald-50/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            {inst.isPaid ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
+                                <span className="text-xs font-bold leading-none">
+                                  #{inst.number}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold leading-none text-slate-800">
+                                #{inst.number}
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`text-[11px] font-mono tabular-nums leading-tight mt-1 ${
+                              inst.isPaid
+                                ? 'text-white font-bold'
+                                : 'text-slate-800 font-semibold'
+                            }`}
+                          >
+                            {formatCurrency(displayAmount)}
+                          </span>
+                          <span
+                            className={`text-[10px] leading-tight mt-0.5 ${
+                              inst.isPaid ? 'text-emerald-100 font-medium' : 'text-slate-400'
+                            }`}
+                          >
+                            {formatShortDate(inst.dueDate)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Next due installment highlight if not completed */}
